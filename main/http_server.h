@@ -8,6 +8,10 @@
 #ifndef MAIN_HTTP_SERVER_H_
 #define MAIN_HTTP_SERVER_H_
 
+#define OTA_UPDATE_PENDING 		0
+#define OTA_UPDATE_SUCCESSFUL	1
+#define OTA_UPDATE_FAILED		-1
+
 /**
  * Messages for the HTTP monitor
  */
@@ -46,5 +50,10 @@ void http_server_start(void);
  * Stops the HTTP server.
  */
 void http_server_stop(void);
+
+/**
+ * Timer callback function which calls esp_restart upon successful firmware update.
+ */
+void http_server_fw_update_reset_callback(void *arg);
 
 #endif /* MAIN_HTTP_SERVER_H_ */
