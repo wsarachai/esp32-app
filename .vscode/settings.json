@@ -2,5 +2,6 @@
     "files.associations": {
         "ledc.h": "c",
         "esp_err.h": "c"
-    }
+    },
+    "idf.adapterTargetName": "esp32"
 }
