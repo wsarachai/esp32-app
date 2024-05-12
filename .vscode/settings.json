@@ -2,7 +2,8 @@
     "files.associations": {
         "ledc.h": "c",
         "esp_err.h": "c",
-        "rgb_led.h": "c"
+        "rgb_led.h": "c",
+        "wifi_app.h": "c"
     },
     "idf.adapterTargetName": "esp32"
 }
