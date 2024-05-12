@@ -75,6 +75,20 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base, int32
 			case WIFI_EVENT_STA_DISCONNECTED:
 				ESP_LOGI(TAG, "WIFI_EVENT_STA_DISCONNECTED");
 
+				wifi_event_sta_disconnected_t *wifi_event_sta_disconnected = (wifi_event_sta_disconnected_t*)malloc(sizeof(wifi_event_sta_disconnected_t));
+				*wifi_event_sta_disconnected = *((wifi_event_sta_disconnected_t*)event_data);
+				printf("WIFI_EVENT_STA_DISCONNECTED, reason code %d\n", wifi_event_sta_disconnected->reason);
+
+				if (g_retry_number < MAX_CONNECTION_RETRIES)
+				{
+					esp_wifi_connect();
+					g_retry_number ++;
+				}
+				else
+				{
+					wifi_app_send_message(WIFI_APP_MSG_STA_DISCONNECTED);
+				}
+
 				break;
 		}
 	}
@@ -84,6 +98,8 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base, int32
 		{
 			case IP_EVENT_STA_GOT_IP:
 				ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
+
+				wifi_app_send_message(WIFI_APP_MSG_STA_CONNECTED_GOT_IP);
 
 				break;
 		}
@@ -160,6 +176,15 @@ static void wifi_app_soft_ap_config(void)
 }
 
 /**
+ * Connects the ESP32 to an external AP using the updated station configuration
+ */
+static void wifi_app_connect_sta(void)
+{
+	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_app_get_wifi_config()));
+	ESP_ERROR_CHECK(esp_wifi_connect());
+}
+
+/**
  * Main task for the WiFi application
  * @param pvParameters parameter which can be passed to the task
  */
@@ -182,16 +207,12 @@ static void wifi_app_task(void *pvParameters)
 	// Send first event message
 	wifi_app_send_message(WIFI_APP_MSG_START_HTTP_SERVER);
 
-    for(;;) {
+	for (;;)
+	{
 		if (xQueueReceive(wifi_app_queue_handle, &msg, portMAX_DELAY))
 		{
 			switch (msg.msgID)
 			{
-				case WIFI_APP_MSG_LOAD_SAVED_CREDENTIALS:
-					ESP_LOGI(TAG, "WIFI_APP_MSG_LOAD_SAVED_CREDENTIALS");
-
-					break;
-
 				case WIFI_APP_MSG_START_HTTP_SERVER:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
 
@@ -203,20 +224,29 @@ static void wifi_app_task(void *pvParameters)
 				case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER");
 
+					// Attempt a connection
+					wifi_app_connect_sta();
+
+					// Set current number of retries to zero
+					g_retry_number = 0;
+
+					// Let the HTTP server know about the connection attempt
+					http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_INIT);
+
 					break;
 
 				case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
 
-					break;
-
-				case WIFI_APP_MSG_USER_REQUESTED_STA_DISCONNECT:
-					ESP_LOGI(TAG, "WIFI_APP_MSG_USER_REQUESTED_STA_DISCONNECT");
+					rgb_led_wifi_connected();
+					http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_SUCCESS);
 
 					break;
 
 				case WIFI_APP_MSG_STA_DISCONNECTED:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_STA_DISCONNECTED");
+
+					http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_FAIL);
 
 					break;
 
@@ -225,7 +255,7 @@ static void wifi_app_task(void *pvParameters)
 
 			}
 		}
-    }
+	}
 }
 
 BaseType_t wifi_app_send_message(wifi_app_message_e msgID)
