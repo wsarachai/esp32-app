@@ -11,6 +11,7 @@ var wifiConnectInterval = null;
 $(document).ready(function(){
 	getUpdateStatus();
 	startDHTSensorInterval();
+	startLocalTimeInterval();
 	getConnectInfo();
 	$("#connect_wifi").on("click", function(){
 		checkCredentials();
@@ -299,13 +300,6 @@ function getConnectInfo()
 function disconnectWifi()
 {
 	var requestURL = "/wifiDisconnect.json";
-	$.ajax({
-		url: '/wifiDisconnect.json',
-		dataType: 'json',
-		method: 'DELETE',
-		cache: false,
-		data: { 'timestamp': Date.now() }
-	});
 	
     fetch(requestURL, {
     	method: 'DELETE',
@@ -319,4 +313,28 @@ function disconnectWifi()
     
 	// Update the web page
 	setTimeout("location.reload(true);", 2000);
+}
+
+/**
+ * Sets the interval for displaying local time.
+ */
+function startLocalTimeInterval()
+{
+	setInterval(getLocalTime, 10000);
+}
+
+/**
+ * Gets the local time.
+ * @note connect the ESP32 to the internet and the time will be updated.
+ */
+function getLocalTime()
+{
+	var requestURL = "/localTime.json";
+	
+    fetch(requestURL, {
+    	method: 'GET',
+		cache: 'no-cache'
+    }).then(response => response.json()).then(data => {
+    	$("#local_time").text(data["time"]);
+    });
 }

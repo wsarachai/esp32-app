@@ -76,4 +76,14 @@ void wifi_app_start(void);
  */
 wifi_config_t* wifi_app_get_wifi_config(void);
 
+/**
+ * Sets the callback function.
+ */
+void wifi_app_set_callback(wifi_connected_event_callback_t cb);
+
+/**
+ * Calls the callback function.
+ */
+void wifi_app_call_callback(void);
+
 #endif /* MAIN_WIFI_APP_H_ */

@@ -15,6 +15,7 @@
 
 #include "DHT22.h"
 #include "http_server.h"
+#include "sntp_time_sync.h"
 #include "tasks_common.h"
 #include "wifi_app.h"
 
@@ -26,6 +27,9 @@ static int g_wifi_connect_status = NONE;
 
 // Firmware update status
 static int g_fw_update_status = OTA_UPDATE_PENDING;
+
+// Local Time status
+static bool g_is_local_time_set = false;
 
 // HTTP server task handle
 static httpd_handle_t http_server_handle = NULL;
@@ -135,8 +139,10 @@ static void http_server_monitor(void *parameter)
 
 					break;
 
-				case HTTP_MSG_OTA_UPATE_INITIALIZED:
-					ESP_LOGI(TAG, "HTTP_MSG_OTA_UPATE_INITIALIZED");
+				case HTTP_MSG_TIME_SERVICE_INITIALIZED:
+					ESP_LOGI(TAG, "HTTP_MSG_TIME_SERVICE_INITIALIZED");
+
+					g_is_local_time_set = true;
 
 					break;
 
@@ -343,7 +349,7 @@ esp_err_t http_server_OTA_status_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/dhtSensor.json requested");
+//	ESP_LOGI(TAG, "/dhtSensor.json requested");
 
 	char dhtSensorJSON[100];
 
@@ -410,7 +416,7 @@ static esp_err_t http_server_wifi_connect_json_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_wifi_connect_status_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/wifiConnectStatus requested");
+//	ESP_LOGI(TAG, "/wifiConnectStatus requested");
 
 	char statusJSON[100];
 
@@ -429,12 +435,15 @@ static esp_err_t http_server_wifi_connect_status_json_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_get_wifi_connect_info_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/wifiConnectInfo.json requested");
+//	ESP_LOGI(TAG, "/wifiConnectInfo.json requested");
 
 	char ipInfoJSON[200];
 	memset(ipInfoJSON, 0, sizeof(ipInfoJSON));
 
 	char ip[IP4ADDR_STRLEN_MAX];
+//	char dns_main[IP4ADDR_STRLEN_MAX];
+//	char dns_backup[IP4ADDR_STRLEN_MAX];
+//	char dns_fallback[IP4ADDR_STRLEN_MAX];
 	char netmask[IP4ADDR_STRLEN_MAX];
 	char gw[IP4ADDR_STRLEN_MAX];
 
@@ -449,6 +458,17 @@ static esp_err_t http_server_get_wifi_connect_info_json_handler(httpd_req_t *req
 		esp_ip4addr_ntoa(&ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
 		esp_ip4addr_ntoa(&ip_info.netmask, netmask, IP4ADDR_STRLEN_MAX);
 		esp_ip4addr_ntoa(&ip_info.gw, gw, IP4ADDR_STRLEN_MAX);
+
+//		esp_netif_dns_info_t dns_info;
+//		ESP_ERROR_CHECK(esp_netif_get_dns_info(esp_netif_sta, ESP_NETIF_DNS_MAIN, &dns_info));
+//		esp_ip4addr_ntoa(&dns_info.ip.u_addr.ip4, dns_main, IP4ADDR_STRLEN_MAX);
+//		ESP_ERROR_CHECK(esp_netif_get_dns_info(esp_netif_sta, ESP_NETIF_DNS_BACKUP, &dns_info));
+//		esp_ip4addr_ntoa(&dns_info.ip.u_addr.ip4, dns_backup, IP4ADDR_STRLEN_MAX);
+//		ESP_ERROR_CHECK(esp_netif_get_dns_info(esp_netif_sta, ESP_NETIF_DNS_FALLBACK, &dns_info));
+//		esp_ip4addr_ntoa(&dns_info.ip.u_addr.ip4, dns_fallback, IP4ADDR_STRLEN_MAX);
+//		printf("DNS-Main: %s\n", dns_main);
+//		printf("DNS-Backup: %s\n", dns_backup);
+//		printf("DNS-Fallback: %s\n", dns_fallback);
 
 		sprintf(ipInfoJSON, "{\"ip\":\"%s\",\"netmask\":\"%s\",\"gw\":\"%s\",\"ap\":\"%s\"}", ip, netmask, gw, ssid);
 	} else {
@@ -475,6 +495,28 @@ static esp_err_t http_server_wifi_disconnect_json_handler(httpd_req_t *req)
 	return ESP_OK;
 }
 
+/**
+ * localTime.json handler responds by sending the local time.
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t http_server_get_local_time_json_handler(httpd_req_t *req)
+{
+//	ESP_LOGI(TAG, "/localTime.json requested");
+
+	char localTimeJSON[100] = {0};
+
+	if (g_is_local_time_set)
+	{
+		sprintf(localTimeJSON, "{\"time\":\"%s\"}", sntp_time_sync_get_time());
+	}
+
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_send(req, localTimeJSON, strlen(localTimeJSON));
+
+	return ESP_OK;
+}
+
 
 /**
  * Sets up the default httpd server configuration.
@@ -486,7 +528,7 @@ static httpd_handle_t http_server_configure(void)
 	httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
 	// Create HTTP server monitor task
-	xTaskCreatePinnedToCore(&http_server_monitor, "http_server_monitor", HTTP_SERVER_MONITOR_STACK_SIZE, NULL, HTTP_SERVER_MONITOR_PRIORITY, &task_http_server_monitor, HTTP_SERVER_MONITOR_CORE_ID);
+	xTaskCreatePinnedToCore(&http_server_monitor, "http_server_monitor", HTTP_SERVER_MONITOR_TASK_STACK_SIZE, NULL, HTTP_SERVER_MONITOR_TASK_PRIORITY, &task_http_server_monitor, HTTP_SERVER_MONITOR_TASK_CORE_ID);
 
 	// Create the message queue
 	http_server_monitor_queue_handle = xQueueCreate(3, sizeof(http_server_queue_message_t));
@@ -624,6 +666,15 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &wifi_disconnect_json);
+
+		// register localTime.json handler
+		httpd_uri_t local_time_json = {
+				.uri = "/localTime.json",
+				.method = HTTP_GET,
+				.handler = http_server_get_local_time_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &local_time_json);
 
 		return http_server_handle;
 	}

@@ -56,18 +56,18 @@ void errorHandler(int response)
 	switch(response) {
 	
 		case DHT_TIMEOUT_ERROR :
-			ESP_LOGE( TAG, "Sensor Timeout\n" );
+//			ESP_LOGE( TAG, "Sensor Timeout\n" );
 			break;
 
 		case DHT_CHECKSUM_ERROR:
-			ESP_LOGE( TAG, "CheckSum error\n" );
+//			ESP_LOGE( TAG, "CheckSum error\n" );
 			break;
 
 		case DHT_OK:
 			break;
 
 		default :
-			ESP_LOGE( TAG, "Unknown error\n" );
+//			ESP_LOGE( TAG, "Unknown error\n" );
 	}
 }
 
@@ -140,14 +140,16 @@ To request data from DHT:
 
 int readDHT()
 {
-int uSec = 0;
+	int uSec = 0;
 
-uint8_t dhtData[MAXdhtData];
-uint8_t byteInx = 0;
-uint8_t bitInx = 7;
+	uint8_t dhtData[MAXdhtData];
+	uint8_t byteInx = 0;
+	uint8_t bitInx = 7;
 
-	for (int k = 0; k<MAXdhtData; k++) 
+	for (int k = 0; k<MAXdhtData; k++)
+	{
 		dhtData[k] = 0;
+	}
 
 	// == Send start signal to DHT sensor ===========
 

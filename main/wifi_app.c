@@ -23,6 +23,9 @@
 // Tag used for ESP serial console messages
 static const char TAG [] = "wifi_app";
 
+// WiFi application callback
+static wifi_connected_event_callback_t wifi_connected_event_cb;
+
 // Used for returning the WiFi configuration
 wifi_config_t *wifi_config = NULL;
 
@@ -36,6 +39,7 @@ static EventGroupHandle_t wifi_app_event_group;
 const int WIFI_APP_CONNECTING_USING_SAVED_CREDS_BIT			= BIT0;
 const int WIFI_APP_CONNECTING_FROM_HTTP_SERVER_BIT			= BIT1;
 const int WIFI_APP_USER_REQUESTED_STA_DISCONNECT_BIT		= BIT2;
+const int WIFI_APP_STA_CONNECTED_GOT_IP_BIT					= BIT3;
 
 // Queue handle used to manipulate the main queue of events
 static QueueHandle_t wifi_app_queue_handle;
@@ -181,7 +185,6 @@ static void wifi_app_soft_ap_config(void)
 	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));			///> Set our configuration
 	ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));		///> Our default bandwidth 20 MHz
 	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_STA_POWER_SAVE));						///> Power save set to "NONE"
-
 }
 
 /**
@@ -268,6 +271,8 @@ static void wifi_app_task(void *pvParameters)
 				case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
 
+					xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_GOT_IP_BIT);
+
 					rgb_led_wifi_connected();
 					http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_SUCCESS);
 
@@ -286,17 +291,27 @@ static void wifi_app_task(void *pvParameters)
 						xEventGroupClearBits(wifi_app_event_group, WIFI_APP_CONNECTING_FROM_HTTP_SERVER_BIT);
 					}
 
+					// Check for connection callback
+					if (wifi_connected_event_cb)
+					{
+						wifi_app_call_callback();
+					}
+
 					break;
 
 				case WIFI_APP_MSG_USER_REQUESTED_STA_DISCONNECT:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_USER_REQUESTED_STA_DISCONNECT");
 
-					xEventGroupSetBits(wifi_app_event_group, WIFI_APP_USER_REQUESTED_STA_DISCONNECT_BIT);
+					eventBits = xEventGroupGetBits(wifi_app_event_group);
 
-					g_retry_number = MAX_CONNECTION_RETRIES;
-					ESP_ERROR_CHECK(esp_wifi_disconnect());
-					app_nvs_clear_sta_creds();
-					rgb_led_wifi_disconnected();
+					if (eventBits & WIFI_APP_STA_CONNECTED_GOT_IP_BIT) {
+						xEventGroupSetBits(wifi_app_event_group, WIFI_APP_USER_REQUESTED_STA_DISCONNECT_BIT);
+
+						g_retry_number = MAX_CONNECTION_RETRIES;
+						ESP_ERROR_CHECK(esp_wifi_disconnect());
+						app_nvs_clear_sta_creds();
+						rgb_led_wifi_disconnected();
+					}
 
 					break;
 
@@ -328,6 +343,11 @@ static void wifi_app_task(void *pvParameters)
 						// Adjust this case to your needs - maybe you want to keep trying to connect...
 					}
 
+					if (eventBits & WIFI_APP_STA_CONNECTED_GOT_IP_BIT)
+					{
+						xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_GOT_IP_BIT);
+					}
+
 					break;
 
 				default:
@@ -348,6 +368,16 @@ BaseType_t wifi_app_send_message(wifi_app_message_e msgID)
 wifi_config_t* wifi_app_get_wifi_config(void)
 {
 	return wifi_config;
+}
+
+void wifi_app_set_callback(wifi_connected_event_callback_t cb)
+{
+	wifi_connected_event_cb = cb;
+}
+
+void wifi_app_call_callback(void)
+{
+	wifi_connected_event_cb();
 }
 
 void wifi_app_start(void)

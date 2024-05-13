@@ -37,6 +37,11 @@ h4 {
 	color: red;
 }
 
+#local_time {
+	display:inline;
+	color: #1d3557;
+}
+
 #latest_firmware, #latest_firmware_label {
 	display:inline;
 }
@@ -116,15 +121,3 @@ input[type="button"]:active {
     box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
                 inset 2px 2px 3px rgba(0, 0, 0, .6);
 }
-
-
-
-
-
-
-
-
-
-
-
-
