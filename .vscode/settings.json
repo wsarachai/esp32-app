@@ -3,7 +3,8 @@
         "ledc.h": "c",
         "esp_err.h": "c",
         "rgb_led.h": "c",
-        "wifi_app.h": "c"
+        "wifi_app.h": "c",
+        "http_server.h": "c"
     },
     "idf.adapterTargetName": "esp32"
 }

@@ -77,31 +77,33 @@ function updateProgress(oEvent)
  */
 function getUpdateStatus() 
 {
-    var xhr = new XMLHttpRequest();
     var requestURL = "/OTAstatus";
-    xhr.open('POST', requestURL, false);
-    xhr.send('ota_update_status');
-
-    if (xhr.readyState == 4 && xhr.status == 200) 
-	{		
-        var response = JSON.parse(xhr.responseText);
-						
-	 	document.getElementById("latest_firmware").innerHTML = response.compile_date + " - " + response.compile_time
+    fetch(requestURL, {
+    	method: 'POST',
+		cache: 'no-cache',
+		body: 'ota_update_status',
+		headers: {
+    		'Content-Type': 'application/x-www-form-urlencoded'
+    	}
+    })
+    .then(response => response.json())
+	.then(data => {
+	 	document.getElementById("latest_firmware").innerHTML = data.compile_date + " - " + data.compile_time
 
 		// If flashing was complete it will return a 1, else -1
 		// A return of 0 is just for information on the Latest Firmware request
-        if (response.ota_update_status == 1) 
+        if (data.ota_update_status == 1) 
 		{
     		// Set the countdown timer time
             seconds = 10;
             // Start the countdown timer
             otaRebootTimer();
         } 
-        else if (response.ota_update_status == -1)
+        else if (data.ota_update_status == -1)
 		{
             document.getElementById("ota_update_status").innerHTML = "!!! Upload Error !!!";
         }
-    }
+    });
 }
 
 /**
@@ -158,29 +160,32 @@ function stopWifiConnectStatusInterval()
  */
 function getWifiConnectStatus()
 {
-	var xhr = new XMLHttpRequest();
 	var requestURL = "/wifiConnectStatus";
-	xhr.open('POST', requestURL, false);
-	xhr.send('wifi_connect_status');
 	
-	if (xhr.readyState == 4 && xhr.status == 200)
-	{
-		var response = JSON.parse(xhr.responseText);
-		
+    fetch(requestURL, {
+    	method: 'POST',
+		cache: 'no-cache',
+		body: 'wifi_connect_status',
+		headers: {
+    		'Content-Type': 'application/x-www-form-urlencoded'
+    	}
+    })
+    .then(response => response.json())
+	.then(data => {
 		document.getElementById("wifi_connect_status").innerHTML = "Connecting...";
 		
-		if (response.wifi_connect_status == 2)
+		if (data.wifi_connect_status == 2)
 		{
 			document.getElementById("wifi_connect_status").innerHTML = "<h4 class='rd'>Failed to Connect. Please check your AP credentials and compatibility</h4>";
 			stopWifiConnectStatusInterval();
 		}
-		else if (response.wifi_connect_status == 3)
+		else if (data.wifi_connect_status == 3)
 		{
 			document.getElementById("wifi_connect_status").innerHTML = "<h4 class='gr'>Connection Success!</h4>";
 			stopWifiConnectStatusInterval();
 			getConnectInfo();
 		}
-	}
+    });
 }
 
 /**
@@ -266,8 +271,9 @@ function showPassword()
  */
 function getConnectInfo()
 {
-	$.getJSON('/wifiConnectInfo.json', function(data)
-	{
+	var requestURL = "/wifiConnectInfo.json";
+	
+	fetch(requestURL).then(response => response.json()).then(data => {
 		$("#connected_ap_label").html("Connected to: ");
 		$("#connected_ap").text(data["ap"]);
 		
@@ -283,29 +289,3 @@ function getConnectInfo()
 		document.getElementById('disconnect_wifi').style.display = 'block';
 	});
 }
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-    
-
-

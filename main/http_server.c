@@ -95,15 +95,28 @@ static void http_server_monitor(void *parameter)
 				case HTTP_MSG_WIFI_CONNECT_INIT:
 					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_INIT");
 
+					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECTING;
+
 					break;
 
 				case HTTP_MSG_WIFI_CONNECT_SUCCESS:
 					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_SUCCESS");
 
+					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_SUCCESS;
+
 					break;
 
 				case HTTP_MSG_WIFI_CONNECT_FAIL:
 					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_FAIL");
+
+					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_FAILED;
+
+					break;
+
+				case HTTP_MSG_WIFI_USER_DISCONNECT:
+					ESP_LOGI(TAG, "HTTP_MSG_WIFI_USER_DISCONNECT");
+
+					g_wifi_connect_status = HTTP_WIFI_STATUS_DISCONNECTED;
 
 					break;
 
@@ -330,7 +343,7 @@ esp_err_t http_server_OTA_status_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/dhtSensor.json requested");
+//	ESP_LOGI(TAG, "/dhtSensor.json requested");
 
 	char dhtSensorJSON[100];
 
@@ -397,7 +410,7 @@ static esp_err_t http_server_wifi_connect_json_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_wifi_connect_status_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/wifiConnectStatus requested");
+//	ESP_LOGI(TAG, "/wifiConnectStatus requested");
 
 	char statusJSON[100];
 
@@ -438,6 +451,8 @@ static esp_err_t http_server_get_wifi_connect_info_json_handler(httpd_req_t *req
 		esp_ip4addr_ntoa(&ip_info.gw, gw, IP4ADDR_STRLEN_MAX);
 
 		sprintf(ipInfoJSON, "{\"ip\":\"%s\",\"netmask\":\"%s\",\"gw\":\"%s\",\"ap\":\"%s\"}", ip, netmask, gw, ssid);
+	} else {
+		sprintf(ipInfoJSON, "{\"ip\":\"0.0.0.0\",\"netmask\":\"0.0.0.0\",\"gw\":\"0.0.0.0\",\"ap\":\"UNKNOWN\"}");
 	}
 
 	httpd_resp_set_type(req, "application/json");

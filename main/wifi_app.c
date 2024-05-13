@@ -367,6 +367,9 @@ void wifi_app_start(void)
 	// Create message queue
 	wifi_app_queue_handle = xQueueCreate(3, sizeof(wifi_app_queue_message_t));
 
+	// Create Wifi application event group
+	wifi_app_event_group = xEventGroupCreate();
+
 	// Start the WiFi application task
 	xTaskCreatePinnedToCore(&wifi_app_task, "wifi_app_task", WIFI_APP_TASK_STACK_SIZE, NULL, WIFI_APP_TASK_PRIORITY, NULL, WIFI_APP_TASK_CORE_ID);
 }
