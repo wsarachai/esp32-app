@@ -296,7 +296,7 @@ static void wifi_app_task(void *pvParameters)
 					g_retry_number = MAX_CONNECTION_RETRIES;
 					ESP_ERROR_CHECK(esp_wifi_disconnect());
 					app_nvs_clear_sta_creds();
-					rgb_led_http_server_started(); ///> todo: rename this status LED to a name more meaningful (to your liking)...
+					rgb_led_wifi_disconnected();
 
 					break;
 

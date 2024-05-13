@@ -118,3 +118,13 @@ void rgb_led_wifi_connected(void)
 
 	rgb_led_set_color(0, 255, 153);
 }
+
+void rgb_led_wifi_disconnected(void)
+{
+	if (g_pwm_init_handle == false)
+	{
+		rgb_led_pwm_init();
+	}
+
+	rgb_led_set_color(255, 102, 255);
+}
