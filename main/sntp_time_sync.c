@@ -16,7 +16,7 @@
 #include "wifi_app.h"
 
 static const char TAG[] = "sntp_time_sync";
-static const int year_ref = 1900;
+static const int year_ref = 2016;
 
 // SNTP operating mode set status
 static bool sntp_op_mode_set = false;
@@ -60,18 +60,13 @@ static void sntp_time_sync_obtain_time(void)
 	time(&now);
 	localtime_r(&now, &time_info);
 
-	printf("time_info.tm_year %d\n", time_info.tm_year);
-
 	// Check the time, in case we need to initialize/reinitialize
 	if (time_info.tm_year < (year_ref - 1900))
 	{
-		printf("(year_ref - 1900) = %d\n", (year_ref - 1900));
-
 		sntp_time_sync_init_sntp();
 
 		// Set the local time zone
-//		setenv("THA", "ICT-7", 1);
-		setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+		setenv("TZ", "CST-7", 1);
 		tzset();
 	}
 }

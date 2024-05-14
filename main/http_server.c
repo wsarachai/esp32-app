@@ -509,10 +509,35 @@ static esp_err_t http_server_get_local_time_json_handler(httpd_req_t *req)
 	if (g_is_local_time_set)
 	{
 		sprintf(localTimeJSON, "{\"time\":\"%s\"}", sntp_time_sync_get_time());
+	} else {
+		sprintf(localTimeJSON, "{\"time\":\"00.00.00 00:00:00\"}");
 	}
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, localTimeJSON, strlen(localTimeJSON));
+
+	return ESP_OK;
+}
+
+/**
+ * apSSID.json handler responds by sending the AP SSID.
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t http_server_get_ap_ssid_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/apSSID.json requested");
+
+	char ssidJSON[50];
+
+	wifi_config_t *wifi_config = wifi_app_get_wifi_config();
+	esp_wifi_get_config(ESP_IF_WIFI_AP, wifi_config);
+	char *ssid = (char*)wifi_config->ap.ssid;
+
+	sprintf(ssidJSON, "{\"ssid\":\"%s\"}", ssid);
+
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_send(req, ssidJSON, strlen(ssidJSON));
 
 	return ESP_OK;
 }
@@ -675,6 +700,15 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &local_time_json);
+
+		// register apSSID.json handler
+		httpd_uri_t ap_ssid_json = {
+				.uri = "/apSSID.json",
+				.method = HTTP_GET,
+				.handler = http_server_get_ap_ssid_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &ap_ssid_json);
 
 		return http_server_handle;
 	}
