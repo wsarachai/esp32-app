@@ -5,11 +5,14 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "ds3231.h"
 #include "aws_iot.h"
 #include "DHT22.h"
 #include "sntp_time_sync.h"
 #include "wifi_app.h"
 #include "wifi_reset_button.h"
+
+#include "esp_log.h"
 
 static const char TAG[] = "main";
 
@@ -22,8 +25,12 @@ void wifi_application_connected_events(void)
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "[APP] Startup..");
+    ESP_LOGI(TAG, "[APP] Free memory: %"PRIu32" bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+
     // Initialize NVS
-	esp_err_t ret = nvs_flash_init();
+    esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
 	{
 		ESP_ERROR_CHECK(nvs_flash_erase());
@@ -36,6 +43,9 @@ void app_main(void)
 
 	// Configure Wifi reset button
 	wifi_reset_button_config();
+
+	// Start DS3231 RTC task
+	DS3231_task_start();
 
 	// Start DHT22 Sensor task
 	DHT22_task_start();

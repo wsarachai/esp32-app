@@ -10,6 +10,7 @@
 #include "freertos/task.h"
 #include "lwip/apps/sntp.h"
 
+#include "ds3231.h"
 #include "tasks_common.h"
 #include "http_server.h"
 #include "sntp_time_sync.h"
@@ -36,8 +37,6 @@ static void sntp_time_sync_init_sntp(void)
 	}
 
 	sntp_setservername(0, "pool.ntp.org");
-//	sntp_setservername(0, "time.nist.gov");
-//	sntp_setservername(0, "time.windows.com");
 
 	// Initialize the servers
 	sntp_init();
@@ -55,7 +54,7 @@ static void sntp_time_sync_obtain_time(void)
 {
 	time_t now = 0;
 	struct tm time_info = {0};
-
+	struct tm rtcinfo = {0};
 
 	time(&now);
 	localtime_r(&now, &time_info);
@@ -68,6 +67,43 @@ static void sntp_time_sync_obtain_time(void)
 		// Set the local time zone
 		setenv("TZ", "CST-7", 1);
 		tzset();
+	}
+	else {
+		if (ds3231_get_time(&rtcinfo) != ESP_OK) {
+			ESP_LOGE(pcTaskGetName(0), "Could not get time.");
+		}
+		else
+		{
+			if (time_info.tm_year != rtcinfo.tm_year)
+			{
+//				char time_buffer[100];
+//				ESP_LOGE(TAG, "timeinfo.tm_sec=%d", time_info.tm_sec);
+//				ESP_LOGE(TAG, "timeinfo.tm_min=%d", time_info.tm_min);
+//				ESP_LOGE(TAG, "timeinfo.tm_hour=%d", time_info.tm_hour);
+//				ESP_LOGE(TAG, "timeinfo.tm_wday=%d", time_info.tm_wday);
+//				ESP_LOGE(TAG, "timeinfo.tm_mday=%d", time_info.tm_mday);
+//				ESP_LOGE(TAG, "timeinfo.tm_mon=%d", time_info.tm_mon);
+//				ESP_LOGE(TAG, "timeinfo.tm_year=%d", time_info.tm_year);
+//				strftime(time_buffer, sizeof(time_buffer), "%d.%m.%Y %H:%M:%S", &time_info);
+//				ESP_LOGE(TAG, "Current time info: %s", time_buffer);
+
+				struct tm time = {
+					.tm_year = (time_info.tm_year % 100) + 2000,
+					.tm_mon  = time_info.tm_mon,  // 0-based
+					.tm_mday = time_info.tm_mday,
+					.tm_hour = time_info.tm_hour,
+					.tm_min  = time_info.tm_min,
+					.tm_sec  = time_info.tm_sec
+				};
+
+				if (ds3231_set_time(&time) != ESP_OK) {
+					ESP_LOGE(TAG, "Could not set time.");
+				}
+				else {
+					ESP_LOGI(TAG, "DS3231 initial date time done");
+				}
+			}
+		}
 	}
 }
 

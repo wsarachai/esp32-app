@@ -13,6 +13,7 @@
 #include "lwip/ip4_addr.h"
 #include "sys/param.h"
 
+#include "ds3231.h"
 #include "DHT22.h"
 #include "http_server.h"
 #include "sntp_time_sync.h"
@@ -502,15 +503,19 @@ static esp_err_t http_server_wifi_disconnect_json_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_get_local_time_json_handler(httpd_req_t *req)
 {
-//	ESP_LOGI(TAG, "/localTime.json requested");
+	ESP_LOGI(TAG, "/localTime.json requested");
 
 	char localTimeJSON[100] = {0};
+
+	sprintf(localTimeJSON, "{\"time\":\"00.00.00 00:00:00\"}");
 
 	if (g_is_local_time_set)
 	{
 		sprintf(localTimeJSON, "{\"time\":\"%s\"}", sntp_time_sync_get_time());
-	} else {
-		sprintf(localTimeJSON, "{\"time\":\"00.00.00 00:00:00\"}");
+	}
+	else
+	{
+		sprintf(localTimeJSON, "{\"time\":\"%s\"}", DS3231_time_sync_get_time());
 	}
 
 	httpd_resp_set_type(req, "application/json");
