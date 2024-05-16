@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "water_humidity_oneshot.h"
 #include "ds3231.h"
 #include "aws_iot.h"
 #include "DHT22.h"
@@ -49,6 +50,9 @@ void app_main(void)
 
 	// Start DHT22 Sensor task
 	DHT22_task_start();
+
+	// Start Water humidity
+	water_adc_task_start();
 
 	// Set connected event callback
 	wifi_app_set_callback(&wifi_application_connected_events);

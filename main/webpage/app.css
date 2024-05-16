@@ -64,6 +64,11 @@ h4 {
 	color: #1d3557;
 }
 
+#soil_humidity_reading {
+	display:inline;
+	color: #1d3557;
+}
+
 #connected_ap_label, #connected_ap {
 	display:inline;
 }

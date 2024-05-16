@@ -13,6 +13,7 @@
 #include "lwip/ip4_addr.h"
 #include "sys/param.h"
 
+#include "water_humidity_oneshot.h"
 #include "ds3231.h"
 #include "DHT22.h"
 #include "http_server.h"
@@ -352,9 +353,9 @@ static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *r
 {
 //	ESP_LOGI(TAG, "/dhtSensor.json requested");
 
-	char dhtSensorJSON[100];
+	char dhtSensorJSON[128];
 
-	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\"}", getTemperature(), getHumidity());
+	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%d\"}", getTemperature(), getHumidity(), water_humidity_get_voltage());
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, dhtSensorJSON, strlen(dhtSensorJSON));

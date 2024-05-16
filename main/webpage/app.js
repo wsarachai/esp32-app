@@ -137,6 +137,7 @@ function getDHTSensorValues()
 	$.getJSON('/dhtSensor.json', function(data) {
 		$("#temperature_reading").text(data["temp"]);
 		$("#humidity_reading").text(data["humidity"]);
+		$("#soil_humidity_reading").text(data["soil_humidity"]);
 	});
 }
 
