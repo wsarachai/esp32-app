@@ -73,12 +73,8 @@ static void sensor_ctrl_monitor(void *parameter)
 }
 
 void automatic_watering_decision(void) {
-	float current_voltage = water_humidity_get_voltage();
-	water_config_t* water_config = get_water_config();
-
-	ESP_LOGI(TAG, "current_voltage: %.2f", current_voltage);
-
-	float ival = (water_config->analog_voltage_max - current_voltage) / water_config->analog_voltage_max * 100.0;
+	water_config_t *water_config = get_water_config();
+	float ival = get_soil_humidity();
 
 	ESP_LOGI(TAG, "ival: %.2f%%", ival);
 

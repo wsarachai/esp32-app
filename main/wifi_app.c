@@ -14,6 +14,7 @@
 #include "esp_wifi.h"
 #include "lwip/netdb.h"
 
+#include "water_humidity_oneshot.h"
 #include "app_nvs.h"
 #include "http_server.h"
 #include "rgb_led.h"

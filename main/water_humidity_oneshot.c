@@ -121,7 +121,6 @@ static void water_humidity_adc_calibration_deinit(adc_cali_handle_t handle)
 #endif
 }
 
-
 void water_humidity_sync_obtain_value(void)
 {
     ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, WATER_ADC1_CHAN0, &adc_raw[0]));

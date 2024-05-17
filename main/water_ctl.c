@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
+#include "water_humidity_oneshot.h"
 #include "water_ctl.h"
 
 #define WATER_GPIO 			2
@@ -53,4 +54,15 @@ uint8_t get_water_status(void)
 water_config_t *get_water_config(void)
 {
 	return &water_config;
+}
+
+float get_soil_humidity(void)
+{
+	float current_voltage = water_humidity_get_voltage();
+
+	ESP_LOGI(TAG, "current_voltage: %.2f", current_voltage);
+
+	float ival = (water_config.analog_voltage_max - current_voltage) / water_config.analog_voltage_max * 100.0;
+
+	return ival;
 }

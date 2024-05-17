@@ -28,4 +28,6 @@ uint8_t get_water_status(void);
 
 water_config_t *get_water_config(void);
 
+float get_soil_humidity(void);
+
 #endif /* MAIN_WATER_CTL_H_ */
