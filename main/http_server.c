@@ -13,6 +13,7 @@
 #include "lwip/ip4_addr.h"
 #include "sys/param.h"
 
+#include "water_ctl.h"
 #include "water_humidity_oneshot.h"
 #include "ds3231.h"
 #include "DHT22.h"
@@ -412,6 +413,52 @@ static esp_err_t http_server_wifi_connect_json_handler(httpd_req_t *req)
 }
 
 /**
+ * saveWaterConfigure.json handler is invoked after the connect button is pressed
+ * and handles receiving the max voltage and voltage threshold entered by the user
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t water_configure_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/saveWaterConfigure.json.json requested");
+
+	water_config_t* water_config = get_water_config();
+
+	size_t len_max_voltage = 0, len_threshold_voltage;
+	char *max_voltage_str = NULL, *threshold_voltage_str = NULL;
+	float max_voltage = 0.0, threshold_voltage = 0.0;
+
+	// Get max voltage header
+	len_max_voltage = httpd_req_get_hdr_value_len(req, "max-voltage") + 1;
+	if (len_max_voltage > 1)
+	{
+		max_voltage_str = malloc(len_max_voltage);
+		if (httpd_req_get_hdr_value_str(req, "max-voltage", max_voltage_str, len_max_voltage) == ESP_OK)
+		{
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => max-voltage: %s", max_voltage_str);
+		}
+		max_voltage = atoi(max_voltage_str);
+		water_config->analog_voltage_max = max_voltage;
+	}
+
+	// Get max voltage header
+	len_threshold_voltage = httpd_req_get_hdr_value_len(req, "threshold-voltage") + 1;
+	if (len_threshold_voltage > 1)
+	{
+		threshold_voltage_str = malloc(len_threshold_voltage);
+		if (httpd_req_get_hdr_value_str(req, "threshold-voltage", threshold_voltage_str, len_threshold_voltage) == ESP_OK)
+		{
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => threshold-voltage: %s", threshold_voltage_str);
+		}
+		threshold_voltage = atoi(threshold_voltage_str);
+		water_config->low_bound = threshold_voltage;
+	}
+
+	return ESP_OK;
+}
+
+
+/**
  * wifiConnectStatus handler updates the connection status for the web page.
  * @param req HTTP request for which the uri needs to be handled.
  * @return ESP_OK
@@ -715,6 +762,14 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &ap_ssid_json);
+
+		httpd_uri_t save_water_configure_json = {
+				.uri = "/saveWaterConfigure.json",
+				.method = HTTP_POST,
+				.handler = water_configure_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &save_water_configure_json);
 
 		return http_server_handle;
 	}

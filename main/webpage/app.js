@@ -17,6 +17,9 @@ $(document).ready(function() {
 	$("#connect_wifi").on("click", function(){
 		checkCredentials();
 	});
+	$("#save_water_config").on("click", function(){
+		saveWaterConfigure();
+	}); 
 	$("#disconnect_wifi").on("click", function(){
 		disconnectWifi();
 	}); 
@@ -221,6 +224,21 @@ function connectWifi()
 	});
 	
 	startWifiConnectStatusInterval();
+}
+
+function saveWaterConfigure()
+{
+	max_voltage = $("#max_voltage").val();
+	threshold_voltage = $("#threshold_voltage").val();
+
+	$.ajax({
+		url: '/saveWaterConfigure.json',
+		dataType: 'json',
+		method: 'POST',
+		cache: false,
+		headers: {'max-voltage': max_voltage, 'threshold-voltage': threshold_voltage},
+		data: {'timestamp': Date.now()}
+	});
 }
 
 /**

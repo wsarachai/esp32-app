@@ -26,7 +26,6 @@ static adc_cali_handle_t adc1_cali_chan0_handle = NULL;
 static int adc_raw[10];
 static int voltage[10];
 
-
 /*---------------------------------------------------------------
         ADC Calibration
 ---------------------------------------------------------------*/

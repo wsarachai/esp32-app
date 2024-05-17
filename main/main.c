@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "water_ctl.h"
 #include "sensor_controller.h"
 #include "ds3231.h"
 #include "aws_iot.h"
