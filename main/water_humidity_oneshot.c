@@ -20,20 +20,12 @@
 static char TAG[] = "WATER_HUMIDITY";
 
 static adc_oneshot_unit_handle_t adc1_handle;
-
+static bool do_calibration1_chan0 = false;
+static adc_cali_handle_t adc1_cali_chan0_handle = NULL;
 
 static int adc_raw[10];
 static int voltage[10];
 
-int water_humidity_get_raw_data(void)
-{
-	return adc_raw[0];
-}
-
-int water_humidity_get_voltage(void)
-{
-	return voltage[0];
-}
 
 /*---------------------------------------------------------------
         ADC Calibration
@@ -87,19 +79,7 @@ static bool water_humidity_adc_calibration_init(adc_unit_t unit, adc_channel_t c
     return calibrated;
 }
 
-static void water_humidity_adc_calibration_deinit(adc_cali_handle_t handle)
-{
-#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
-    ESP_LOGI(TAG, "deregister %s calibration scheme", "Curve Fitting");
-    ESP_ERROR_CHECK(adc_cali_delete_scheme_curve_fitting(handle));
-
-#elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
-    ESP_LOGI(TAG, "deregister %s calibration scheme", "Line Fitting");
-    ESP_ERROR_CHECK(adc_cali_delete_scheme_line_fitting(handle));
-#endif
-}
-
-static void WATER_HUMIDITY_task(void *pvParameter)
+esp_err_t water_humidity_init(void)
 {
     //-------------ADC1 Init---------------//
     adc_oneshot_unit_init_cfg_t init_config1 = {
@@ -115,32 +95,51 @@ static void WATER_HUMIDITY_task(void *pvParameter)
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, WATER_ADC1_CHAN0, &config));
 
     //-------------ADC1 Calibration Init---------------//
-    adc_cali_handle_t adc1_cali_chan0_handle = NULL;
-    bool do_calibration1_chan0 = water_humidity_adc_calibration_init(ADC_UNIT_1, WATER_ADC1_CHAN0, WATER_ADC_ATTEN, &adc1_cali_chan0_handle);
+    do_calibration1_chan0 = water_humidity_adc_calibration_init(ADC_UNIT_1, WATER_ADC1_CHAN0, WATER_ADC_ATTEN, &adc1_cali_chan0_handle);
 
-	for (;;)
-	{
-        ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, WATER_ADC1_CHAN0, &adc_raw[0]));
+    return ESP_OK;
+}
+
+int water_humidity_get_raw_data(void)
+{
+	return adc_raw[0];
+}
+
+int water_humidity_get_voltage(void)
+{
+	return voltage[0];
+}
+
+static void water_humidity_adc_calibration_deinit(adc_cali_handle_t handle)
+{
+#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+    ESP_LOGI(TAG, "deregister %s calibration scheme", "Curve Fitting");
+    ESP_ERROR_CHECK(adc_cali_delete_scheme_curve_fitting(handle));
+
+#elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+    ESP_LOGI(TAG, "deregister %s calibration scheme", "Line Fitting");
+    ESP_ERROR_CHECK(adc_cali_delete_scheme_line_fitting(handle));
+#endif
+}
+
+
+void water_humidity_sync_obtain_value(void)
+{
+    ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, WATER_ADC1_CHAN0, &adc_raw[0]));
 //        ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", ADC_UNIT_1 + 1, WATER_ADC1_CHAN0, adc_raw[0]);
 
-		if (do_calibration1_chan0) {
-			ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali_chan0_handle, adc_raw[0], &voltage[0]));
+	if (do_calibration1_chan0) {
+		ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali_chan0_handle, adc_raw[0], &voltage[0]));
 //			ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", ADC_UNIT_1 + 1, WATER_ADC1_CHAN0, voltage[0]);
-		}
-
-        vTaskDelay(pdMS_TO_TICKS(5000));
 	}
+}
 
+void water_humidity_tear_down(void)
+{
     //Tear Down
     ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
+
     if (do_calibration1_chan0) {
     	water_humidity_adc_calibration_deinit(adc1_cali_chan0_handle);
     }
 }
-
-void water_adc_task_start(void)
-{
-	xTaskCreatePinnedToCore(&WATER_HUMIDITY_task, "WATER_HUMIDITY_task", WATER_HUMIDITY_TASK_STACK_SIZE, NULL, WATER_HUMIDITY_TASK_PRIORITY, NULL, WATER_HUMIDITY_TASK_CORE_ID);
-}
-
-

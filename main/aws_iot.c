@@ -198,7 +198,7 @@ void aws_iot_task(void *param) {
         paramsQOS0.payloadLen = strlen(cPayload);
         rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS0);
 
-        sprintf(cPayload, "%s : %.1f, %s : %.1f", "Temperature", getTemperature(), "Humidity", getHumidity());
+        sprintf(cPayload, "%s : %.1f, %s : %.1f", "Temperature", DHT22_get_temperature(), "Humidity", DHT22_get_humidity());
         paramsQOS1.payloadLen = strlen(cPayload);
         rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS1);
         if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {

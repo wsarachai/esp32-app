@@ -29,6 +29,12 @@
 #include "DHT22.h"
 #include "tasks_common.h"
 
+#define DHT_OK 				0
+#define DHT_CHECKSUM_ERROR 	-1
+#define DHT_TIMEOUT_ERROR 	-2
+
+#define DHT_GPIO			25
+
 // == global defines =============================================
 
 static const char* TAG = "DHT";
@@ -37,21 +43,29 @@ int DHTgpio = 4;				// my default DHT pin = 4
 float humidity = 0.;
 float temperature = 0.;
 
+esp_err_t DHT22_init(void)
+{
+	// DHT GPIO pin init
+	DHT22_set_gpio(DHT_GPIO);
+//	printf("Starting DHT task\n\n");
+
+	return ESP_OK;
+}
+
 // == set the DHT used pin=========================================
 
-void setDHTgpio( int gpio )
+void DHT22_set_gpio( int gpio )
 {
 	DHTgpio = gpio;
 }
 
 // == get temp & hum =============================================
 
-float getHumidity() { return humidity; }
-float getTemperature() { return temperature; }
+float DHT22_get_humidity() { return humidity; }
+float DHT22_get_temperature() { return temperature; }
 
 // == error handler ===============================================
-
-void errorHandler(int response)
+static void errorHandler(int response)
 {
 	switch(response) {
 	
@@ -79,8 +93,7 @@ void errorHandler(int response)
 ;	to ensure it runs in realtime.
 ;
 ;--------------------------------------------------------------------------------*/
-
-int getSignalLevel( int usTimeOut, bool state )
+static int get_signal_level( int usTimeOut, bool state )
 {
 
 	int uSec = 0;
@@ -138,7 +151,7 @@ To request data from DHT:
 
 #define MAXdhtData 5	// to complete 40 = 5*8 Bits
 
-int readDHT()
+static int readDHT()
 {
 	int uSec = 0;
 
@@ -167,13 +180,13 @@ int readDHT()
   
 	// == DHT will keep the line low for 80 us and then high for 80us ====
 
-	uSec = getSignalLevel( 85, 0 );
+	uSec = get_signal_level( 85, 0 );
 //	ESP_LOGI( TAG, "Response = %d", uSec );
 	if( uSec<0 ) return DHT_TIMEOUT_ERROR; 
 
 	// -- 80us up ------------------------
 
-	uSec = getSignalLevel( 85, 1 );
+	uSec = get_signal_level( 85, 1 );
 //	ESP_LOGI( TAG, "Response = %d", uSec );
 	if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
@@ -183,12 +196,12 @@ int readDHT()
 
 		// -- starts new data transmission with >50us low signal
 
-		uSec = getSignalLevel( 56, 0 );
+		uSec = get_signal_level( 56, 0 );
 		if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
 		// -- check to see if after >70us rx data is a 0 or a 1
 
-		uSec = getSignalLevel( 75, 1 );
+		uSec = get_signal_level( 75, 1 );
 		if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
 		// add the current read to the output data
@@ -233,71 +246,13 @@ int readDHT()
 		return DHT_CHECKSUM_ERROR;
 }
 
-/**
- * DHT22 Sensor task
- */
-static void DHT22_task(void *pvParameter)
+void DHT22_sync_obtain_value(void)
 {
-	setDHTgpio(DHT_GPIO);
-//	printf("Starting DHT task\n\n");
+	//		printf("=== Reading DHT ===\n");
+			int ret = readDHT();
 
-	for (;;)
-	{
-//		printf("=== Reading DHT ===\n");
-		int ret = readDHT();
+			errorHandler(ret);
 
-		errorHandler(ret);
-
-//		printf("Hum %.1f\n", getHumidity());
-//		printf("Tmp %.1f\n", getTemperature());
-
-		// Wait at least 2 seconds before reading again
-		// The interval of the whole process must be more than 2 seconds
-		vTaskDelay(4000 / portTICK_PERIOD_MS);
-	}
+	//		printf("Hum %.1f\n", getHumidity());
+	//		printf("Tmp %.1f\n", getTemperature());
 }
-
-void DHT22_task_start(void)
-{
-	xTaskCreatePinnedToCore(&DHT22_task, "DHT22_task", DHT22_TASK_STACK_SIZE, NULL, DHT22_TASK_PRIORITY, NULL, DHT22_TASK_CORE_ID);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

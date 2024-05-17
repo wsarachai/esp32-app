@@ -7,24 +7,16 @@
 #ifndef DHT22_H_  
 #define DHT22_H_
 
-#define DHT_OK 				0
-#define DHT_CHECKSUM_ERROR 	-1
-#define DHT_TIMEOUT_ERROR 	-2
-
-#define DHT_GPIO			25
-
-/**
- * Starts DHT22 sensor task
- */
-void DHT22_task_start(void);
-
 // == function prototypes =======================================
 
-void 	setDHTgpio(int gpio);
-void 	errorHandler(int response);
-int 	readDHT();
-float 	getHumidity();
-float 	getTemperature();
-int 	getSignalLevel( int usTimeOut, bool state );
+esp_err_t DHT22_init(void);
+
+void DHT22_set_gpio(int gpio);
+
+float DHT22_get_humidity();
+
+float DHT22_get_temperature();
+
+void DHT22_sync_obtain_value(void);
 
 #endif

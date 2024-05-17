@@ -11,13 +11,14 @@
 #define WATER_ADC_ATTEN			ADC_ATTEN_DB_11
 #define WATER_ADC1_CHAN0		ADC_CHANNEL_4
 
-/**
- * Starts DHT22 sensor task
- */
-void water_adc_task_start(void);
+esp_err_t water_humidity_init(void);
 
 int water_humidity_get_raw_data(void);
 
 int water_humidity_get_voltage(void);
+
+void water_humidity_sync_obtain_value(void);
+
+void water_humidity_tear_down(void);
 
 #endif /* MAIN_WATER_HUMIDITY_ONESHOT_H_ */

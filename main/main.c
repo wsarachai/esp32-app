@@ -5,10 +5,9 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "water_humidity_oneshot.h"
+#include "sensor_controller.h"
 #include "ds3231.h"
 #include "aws_iot.h"
-#include "DHT22.h"
 #include "sntp_time_sync.h"
 #include "wifi_app.h"
 #include "wifi_reset_button.h"
@@ -48,11 +47,8 @@ void app_main(void)
 	// Start DS3231 RTC task
 	DS3231_task_start();
 
-	// Start DHT22 Sensor task
-	DHT22_task_start();
-
-	// Start Water humidity
-	water_adc_task_start();
+	// Start sensor controller task
+	SENSOR_CTRL_task_start();
 
 	// Set connected event callback
 	wifi_app_set_callback(&wifi_application_connected_events);

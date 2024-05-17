@@ -355,7 +355,7 @@ static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *r
 
 	char dhtSensorJSON[128];
 
-	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%d\"}", getTemperature(), getHumidity(), water_humidity_get_voltage());
+	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%d\"}", DHT22_get_temperature(), DHT22_get_humidity(), water_humidity_get_voltage());
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, dhtSensorJSON, strlen(dhtSensorJSON));

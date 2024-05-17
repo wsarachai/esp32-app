@@ -192,5 +192,5 @@ static void DS3231_task(void *pvParameter)
 
 void DS3231_task_start(void)
 {
-	xTaskCreatePinnedToCore(&DS3231_task, "DS3231_task", DHT22_TASK_STACK_SIZE, NULL, DHT22_TASK_PRIORITY, NULL, DHT22_TASK_CORE_ID);
+	xTaskCreatePinnedToCore(&DS3231_task, "DS3231_task", DS3231_RTC_TASK_STACK_SIZE, NULL, DS3231_RTC_TASK_PRIORITY, NULL, DS3231_RTC_TASK_CORE_ID);
 }
