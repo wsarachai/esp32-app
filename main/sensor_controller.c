@@ -46,21 +46,26 @@ static void sensor_ctrl_monitor(void *parameter)
 			case SENSOR_CTL_INIT:
 				ESP_LOGI(TAG, "SENSOR_CTL_INIT");
 
-				configure_water();
+				water_ctl_configure();
 
 				break;
 
 			case SENSOR_CTL_WATER_ON:
 				ESP_LOGI(TAG, "SENSOR_CTL_WATER_ON");
 
-				water_on();
+				if (water_ctl_is_off())
+				{
+					water_ctl_on();
+				}
 
 				break;
 
 			case SENSOR_CTL_WATER_OFF:
 				ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF");
 
-				water_off();
+				if (water_ctl_is_on()) {
+					water_ctl_off();
+				}
 
 				break;
 
@@ -73,8 +78,8 @@ static void sensor_ctrl_monitor(void *parameter)
 }
 
 void automatic_watering_decision(void) {
-	water_config_t *water_config = get_water_config();
-	float ival = get_soil_humidity();
+	water_config_t *water_config = water_ctl_get_config();
+	float ival = water_ctl_get_soil_humidity();
 
 	ESP_LOGI(TAG, "ival: %.2f%%", ival);
 

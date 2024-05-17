@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
+#include "wifi_app.h"
 #include "water_humidity_oneshot.h"
 #include "water_ctl.h"
 
@@ -22,7 +23,7 @@ static uint8_t s_water_state = WATER_STATUS_OFF;
 
 static water_config_t water_config = {0};
 
-void configure_water(void)
+void water_ctl_configure(void)
 {
     ESP_LOGI(TAG, "Configured to water GPIO!");
     gpio_reset_pin(WATER_GPIO);
@@ -34,29 +35,40 @@ void configure_water(void)
     gpio_set_direction(WATER_GPIO, GPIO_MODE_OUTPUT);
 }
 
-void water_on(void)
+void water_ctl_on(void)
 {
-	s_water_state = WATER_STATUS_ON;
-    gpio_set_level(WATER_GPIO, s_water_state);
+	if (wifi_app_get_ap_ready())
+	{
+		s_water_state = WATER_STATUS_ON;
+	    gpio_set_level(WATER_GPIO, s_water_state);
+	}
 }
 
-void water_off(void)
+void water_ctl_off(void)
 {
-	s_water_state = WATER_STATUS_OFF;
-    gpio_set_level(WATER_GPIO, s_water_state);
+	if (wifi_app_get_ap_ready())
+	{
+		s_water_state = WATER_STATUS_OFF;
+	    gpio_set_level(WATER_GPIO, s_water_state);
+	}
 }
 
-uint8_t get_water_status(void)
+uint8_t water_ctl_is_on(void)
 {
-	return s_water_state;
+	return s_water_state == WATER_STATUS_ON;
 }
 
-water_config_t *get_water_config(void)
+uint8_t water_ctl_is_off(void)
+{
+	return s_water_state == WATER_STATUS_OFF;
+}
+
+water_config_t *water_ctl_get_config(void)
 {
 	return &water_config;
 }
 
-float get_soil_humidity(void)
+float water_ctl_get_soil_humidity(void)
 {
 	float current_voltage = water_humidity_get_voltage();
 

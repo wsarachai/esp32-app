@@ -33,6 +33,8 @@ wifi_config_t *wifi_config = NULL;
 // Used to track the number for retries when a connection attempt fails
 static int g_retry_number;
 
+static wifi_event_t g_wifi_ap_status = WIFI_EVENT_STA_STOP;
+
 /**
  * Wifi application event group handle and status bits
  */
@@ -64,18 +66,30 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base, int32
 		{
 			case WIFI_EVENT_AP_START:
 				ESP_LOGI(TAG, "WIFI_EVENT_AP_START");
+
+				g_wifi_ap_status = WIFI_EVENT_AP_START;
+
 				break;
 
 			case WIFI_EVENT_AP_STOP:
 				ESP_LOGI(TAG, "WIFI_EVENT_AP_STOP");
+
+				g_wifi_ap_status = WIFI_EVENT_AP_STOP;
+
 				break;
 
 			case WIFI_EVENT_AP_STACONNECTED:
 				ESP_LOGI(TAG, "WIFI_EVENT_AP_STACONNECTED");
+
+				g_wifi_ap_status = WIFI_EVENT_AP_STACONNECTED;
+
 				break;
 
 			case WIFI_EVENT_AP_STADISCONNECTED:
 				ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
+
+				g_wifi_ap_status = WIFI_EVENT_AP_STADISCONNECTED;
+
 				break;
 
 			case WIFI_EVENT_STA_START:
@@ -412,4 +426,9 @@ void wifi_app_start(void)
 
 	// Start the WiFi application task
 	xTaskCreatePinnedToCore(&wifi_app_task, "wifi_app_task", WIFI_APP_TASK_STACK_SIZE, NULL, WIFI_APP_TASK_PRIORITY, NULL, WIFI_APP_TASK_CORE_ID);
+}
+
+bool wifi_app_get_ap_ready(void)
+{
+	return g_wifi_ap_status == WIFI_EVENT_AP_STADISCONNECTED;
 }

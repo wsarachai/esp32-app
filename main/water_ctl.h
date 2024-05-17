@@ -18,16 +18,18 @@ typedef struct water_config
 
 } water_config_t;
 
-void configure_water(void);
+void water_ctl_configure(void);
 
-void water_on(void);
+void water_ctl_on(void);
 
-void water_off(void);
+void water_ctl_off(void);
 
-uint8_t get_water_status(void);
+uint8_t water_ctl_is_on(void);
 
-water_config_t *get_water_config(void);
+uint8_t water_ctl_is_off(void);
 
-float get_soil_humidity(void);
+water_config_t *water_ctl_get_config(void);
+
+float water_ctl_get_soil_humidity(void);
 
 #endif /* MAIN_WATER_CTL_H_ */

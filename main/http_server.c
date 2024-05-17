@@ -356,7 +356,7 @@ static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *r
 
 	char dhtSensorJSON[128];
 
-	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%.2f%%\"}", DHT22_get_temperature(), DHT22_get_humidity(), get_soil_humidity());
+	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%.2f%%\"}", DHT22_get_temperature(), DHT22_get_humidity(), water_ctl_get_soil_humidity());
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, dhtSensorJSON, strlen(dhtSensorJSON));
@@ -422,7 +422,7 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 {
 	ESP_LOGI(TAG, "/saveWaterConfigure.json.json requested");
 
-	water_config_t* water_config = get_water_config();
+	water_config_t* water_config = water_ctl_get_config();
 
 	size_t len_max_voltage = 0, len_threshold_voltage;
 	char *max_voltage_str = NULL, *threshold_voltage_str = NULL;
