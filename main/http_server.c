@@ -814,4 +814,3 @@ void http_server_fw_update_reset_callback(void *arg)
 	esp_restart();
 }
 
-

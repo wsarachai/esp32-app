@@ -46,8 +46,6 @@ static void sensor_ctrl_monitor(void *parameter)
 			case SENSOR_CTL_INIT:
 				ESP_LOGI(TAG, "SENSOR_CTL_INIT");
 
-				water_ctl_configure();
-
 				break;
 
 			case SENSOR_CTL_WATER_ON:

@@ -33,23 +33,24 @@ void water_ctl_configure(void)
 
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(WATER_GPIO, GPIO_MODE_OUTPUT);
+	gpio_set_level(WATER_GPIO, WATER_STATUS_OFF);
 }
 
 void water_ctl_on(void)
 {
-	if (wifi_app_get_ap_ready())
+	if (wifi_app_ready())
 	{
 		s_water_state = WATER_STATUS_ON;
-	    gpio_set_level(WATER_GPIO, s_water_state);
+		gpio_set_level(WATER_GPIO, s_water_state);
 	}
 }
 
 void water_ctl_off(void)
 {
-	if (wifi_app_get_ap_ready())
+	if (wifi_app_ready())
 	{
 		s_water_state = WATER_STATUS_OFF;
-	    gpio_set_level(WATER_GPIO, s_water_state);
+		gpio_set_level(WATER_GPIO, s_water_state);
 	}
 }
 

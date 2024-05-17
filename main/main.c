@@ -39,6 +39,8 @@ void app_main(void)
 	}
 	ESP_ERROR_CHECK(ret);
 
+	water_ctl_configure();
+
 	// Start Wifi
 	wifi_app_start();
 
