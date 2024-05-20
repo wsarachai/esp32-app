@@ -12,14 +12,21 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "water_ctl.h"
 #include "app_nvs.h"
 #include "wifi_app.h"
+
+#define ANALOG_VOLTAGE_MAX 		"avol_max"
+#define WATER_THRESHOLD_VAL		"threshold_v"
 
 // Tag for logging to the monitor
 static const char TAG[] = "nvs";
 
 // NVS name space used for station mode credentials
 const char app_nvs_sta_creds_namespace[] = "stacreds";
+
+// NVS name space used for water configs
+const char app_nvs_water_config_namespace[] = "water_conf";
 
 esp_err_t app_nvs_save_sta_creds(void)
 {
@@ -155,46 +162,129 @@ esp_err_t app_nvs_clear_sta_creds(void)
 	return ESP_OK;
 }
 
+esp_err_t app_nvs_save_water_configs(void)
+{
+	nvs_handle handle;
+	esp_err_t esp_err;
 
+	ESP_LOGI(TAG, "app_nvs_save_water_configs: Saving water configs to flash");
 
+	water_config_t *water_config = water_ctl_get_config();
 
+	if (water_config)
+	{
+		esp_err = nvs_open(app_nvs_water_config_namespace, NVS_READWRITE, &handle);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_save_water_configs: Error (%s) opening NVS handle!\n", esp_err_to_name(esp_err));
+			return esp_err;
+		}
 
+		// Set analog voltage max
+		esp_err = nvs_set_i16(handle, ANALOG_VOLTAGE_MAX, water_config->analog_voltage_max);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_save_water_configs: Error (%s) setting analog voltage max to NVS!\n", esp_err_to_name(esp_err));
+			return esp_err;
+		}
 
+		// Set threshold
+		esp_err = nvs_set_i16(handle, WATER_THRESHOLD_VAL, water_config->threshold);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_save_water_configs: Error (%s) setting threshold to NVS!\n", esp_err_to_name(esp_err));
+			return esp_err;
+		}
 
+		// Commit water configs to NVS
+		esp_err = nvs_commit(handle);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_save_water_configs: Error (%s) comitting water configs to NVS!\n", esp_err_to_name(esp_err));
+			return esp_err;
+		}
+		nvs_close(handle);
+		ESP_LOGI(TAG, "app_nvs_save_water_configs: wrote water_config: Analog voltage max: %d Lower bound: %d", water_config->analog_voltage_max, water_config->threshold);
+	}
 
+	printf("app_nvs_save_water_configs: returned ESP_OK\n");
+	return ESP_OK;
+}
 
+bool app_nvs_load_water_configs(void)
+{
+	nvs_handle handle;
+	esp_err_t esp_err;
 
+	ESP_LOGI(TAG, "app_nvs_load_sta_water_configs: Loading water configs from flash");
 
+	if (nvs_open(app_nvs_water_config_namespace, NVS_READONLY, &handle) == ESP_OK)
+	{
+		water_config_t *water_config = water_ctl_get_config();
 
+		memset(water_config, 0x00, sizeof(water_config_t));
 
+		int16_t water_config_tmp = 0;
 
+		// Load analog voltage max
+		esp_err = nvs_get_i16(handle, ANALOG_VOLTAGE_MAX, &water_config_tmp);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_load_sta_water_configs: (%s) no analog voltage max found in NVS\n", esp_err_to_name(esp_err));
+			return false;
+		}
+		water_config->analog_voltage_max = water_config_tmp;
 
+		// Load threshold
+		esp_err = nvs_get_i16(handle, WATER_THRESHOLD_VAL, &water_config_tmp);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_load_sta_water_configs: (%s) retrieving threshold!\n", esp_err_to_name(esp_err));
+			return false;
+		}
+		water_config->threshold = water_config_tmp;
 
+		nvs_close(handle);
 
+		printf("app_nvs_load_sta_water_configs: Analog voltage max: %d Threshold: %d\n", water_config->analog_voltage_max, water_config->threshold);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
+esp_err_t app_nvs_clear_water_configs(void)
+{
+	nvs_handle handle;
+	esp_err_t esp_err;
+	ESP_LOGI(TAG, "app_nvs_clear_water_configs: Clearing water configs from flash");
 
+	esp_err = nvs_open(app_nvs_water_config_namespace, NVS_READWRITE, &handle);
+	if (esp_err != ESP_OK)
+	{
+		printf("app_nvs_clear_water_configs: Error (%s) opening NVS handle!\n", esp_err_to_name(esp_err));
+		return esp_err;
+	}
 
+	// Erase credentials
+	esp_err = nvs_erase_all(handle);
+	if (esp_err != ESP_OK)
+	{
+		printf("app_nvs_clear_water_configs: Error (%s) erasing water configs!\n", esp_err_to_name(esp_err));
+		return esp_err;
+	}
 
+	// Commit clearing credentials from NVS
+	esp_err = nvs_commit(handle);
+	if (esp_err != ESP_OK)
+	{
+		printf("app_nvs_clear_water_configs: Error (%s) NVS commit!\n", esp_err_to_name(esp_err));
+		return esp_err;
+	}
+	nvs_close(handle);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	printf("app_nvs_clear_water_configs: returned ESP_OK\n");
+	return ESP_OK;
+}

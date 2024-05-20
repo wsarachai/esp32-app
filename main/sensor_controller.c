@@ -49,19 +49,19 @@ static void sensor_ctrl_monitor(void *parameter)
 				break;
 
 			case SENSOR_CTL_WATER_ON:
-				ESP_LOGI(TAG, "SENSOR_CTL_WATER_ON");
 
 				if (water_ctl_is_off())
 				{
+					ESP_LOGI(TAG, "SENSOR_CTL_WATER_ON");
 					water_ctl_on();
 				}
 
 				break;
 
 			case SENSOR_CTL_WATER_OFF:
-				ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF");
 
 				if (water_ctl_is_on()) {
+					ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF");
 					water_ctl_off();
 				}
 
@@ -79,9 +79,9 @@ void automatic_watering_decision(void) {
 	water_config_t *water_config = water_ctl_get_config();
 	float ival = water_ctl_get_soil_humidity();
 
-	ESP_LOGI(TAG, "ival: %.2f%%", ival);
+//	ESP_LOGI(TAG, "ival: %.2f%%", ival);
 
-	if (ival < water_config->low_bound)
+	if (ival < water_config->threshold)
 	{
 		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
 	}

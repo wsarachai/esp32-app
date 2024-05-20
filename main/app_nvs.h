@@ -26,4 +26,23 @@ bool app_nvs_load_sta_creds(void);
  */
 esp_err_t app_nvs_clear_sta_creds(void);
 
+
+/**
+ * Saves water config values to NVS
+ * @return ESP_OK if successful.
+ */
+esp_err_t app_nvs_save_water_configs(void);
+
+/**
+ * Loads the previously saved water configs from NVS.
+ * @return true if previously saved water configs were found.
+ */
+bool app_nvs_load_water_configs(void);
+
+/**
+ * Clears water configs from NVS
+ * @return ESP_OK if successful.
+ */
+esp_err_t app_nvs_clear_water_configs(void);
+
 #endif /* MAIN_APP_NVS_H_ */

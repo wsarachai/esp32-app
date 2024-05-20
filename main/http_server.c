@@ -451,7 +451,7 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 			ESP_LOGI(TAG, "water_configure_json_handler: Found header => threshold-voltage: %s", threshold_voltage_str);
 		}
 		threshold_voltage = atoi(threshold_voltage_str);
-		water_config->low_bound = threshold_voltage;
+		water_config->threshold = threshold_voltage;
 	}
 
 	return ESP_OK;

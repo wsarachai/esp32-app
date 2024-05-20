@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
+#include "app_nvs.h"
 #include "wifi_app.h"
 #include "water_humidity_oneshot.h"
 #include "water_ctl.h"
@@ -28,8 +29,20 @@ void water_ctl_configure(void)
     ESP_LOGI(TAG, "Configured to water GPIO!");
     gpio_reset_pin(WATER_GPIO);
 
-    water_config.analog_voltage_max = 3300.0;
-    water_config.low_bound = 30;
+	if (app_nvs_load_water_configs())
+	{
+		ESP_LOGI(TAG, "Loaded water configuration");
+	}
+	else
+	{
+	    water_config.analog_voltage_max = ANALOG_VOLTAGE_MAX_DEFAULT;
+	    water_config.threshold = THRESHOLD_VALUE_DEFAULT;
+
+	    app_nvs_save_water_configs();
+
+		ESP_LOGI(TAG, "Unable to water configuration, use default value instead");
+	}
+
 
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(WATER_GPIO, GPIO_MODE_OUTPUT);
@@ -73,7 +86,7 @@ float water_ctl_get_soil_humidity(void)
 {
 	float current_voltage = water_humidity_get_voltage();
 
-	ESP_LOGI(TAG, "current_voltage: %.2f", current_voltage);
+//	ESP_LOGI(TAG, "current_voltage: %.2f", current_voltage);
 
 	float ival = (water_config.analog_voltage_max - current_voltage) / water_config.analog_voltage_max * 100.0;
 

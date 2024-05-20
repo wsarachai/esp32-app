@@ -8,13 +8,17 @@
 #ifndef MAIN_WATER_CTL_H_
 #define MAIN_WATER_CTL_H_
 
+
+#define ANALOG_VOLTAGE_MAX_DEFAULT		3300 // 3.3v
+#define THRESHOLD_VALUE_DEFAULT			30 // 30%
+
 /**
  * Structure for the water parameters
  */
 typedef struct water_config
 {
-	float analog_voltage_max;
-	int low_bound;
+	int16_t analog_voltage_max;
+	int16_t threshold;
 
 } water_config_t;
 
