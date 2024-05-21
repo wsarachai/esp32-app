@@ -16,21 +16,21 @@
 
 	<div id="EspSSID">
 		<h2>ESP32 SSID</h2>
-		<label for="ap_ssid">Access Point SSID: </label>
+		<span for="ap_ssid">Access Point SSID: </span>
 		<div id="ap_ssid"></div>
 	</div>
 	<hr>
 
 	<div id="LocalTime">
 		<h2>SNTP Time Synchronization</h2>
-		<label for="local_time">Connect to WiFi for Local Time: </label>
+		<span for="local_time">Connect to WiFi for Local Time: </span>
 		<div id="local_time"></div>
 	</div>
 	<hr>
 		
 	<div id="OTA">
 	<h2>ESP32 Firmware Update</h2>
-		<label id="latest_firmware_label">Latest Firmware: </label>
+		<span id="latest_firmware_label">Latest Firmware: </span>
 		<div id="latest_firmware"></div> 
 		<input type="file" id="selected_file" accept=".bin" style="display: none;" onchange="getFileInfo()" />
 		<div class="buttons">
@@ -45,19 +45,29 @@
 	<div id="DHT22Sensor">
 		<h2>DHT22 Sensor Readings</h2>
 		<span>Temperature: </span> <div id="temperature_reading"></div>
-		<label>Humidity: </span> <div id="humidity_reading"></div>
-		<label>Soil Humidity: </span> <div id="soil_humidity_reading"></div>
+		<span>Humidity: </span> <div id="humidity_reading"></div>
+		<span>Soil Humidity: </span> <div id="soil_humidity_reading"></div>
 	</div>
 	<hr>
 			
 	<div id="WaterConfig">
 		<h2>System Configure</h2>
 		<section>
-			<label>Maximum voltage: <input id="max_voltage" type="number" maxlenght="10" value=""></label>
-			<label>Threshold voltage [0-100]: <input id="threshold_voltage" type="number" maxlenght="10" value=""></label>
+			<span>Water at humidity: </span> <div id="humidity"></div>
+			<span>Duration: </span> <div id="duration"></div>
 		</section>
-		<div class="buttons">
+		<section>
+			<label>Water at humidity [0-100]: <input id="threshold_voltage" type="number" maxlenght="10" value=""></label>
+			<label>Duration: <input id="duration" type="number" maxlenght="10" value=""></label>
 			<input id="save_water_config" type="button" value="Save" />
+		</section>
+	</div>
+	<hr>
+		
+	<div id="ManualControl">
+		<h2>Manual Control</h2>
+		<div class="buttons">
+			<input id="manual_water_btn" type="button" value="Turn on water" />
 		</div>
 	</div>
 	<hr>

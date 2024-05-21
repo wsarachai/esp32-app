@@ -4,7 +4,7 @@
  *  Created on: May 17, 2024
  *      Author: keng
  */
-#include <stdio.h>
+
 #include "driver/gpio.h"
 #include "esp_log.h"
 
@@ -22,6 +22,7 @@ static char TAG[] = "water_ctl";
 
 static uint8_t s_water_state = WATER_STATUS_OFF;
 
+
 static water_config_t water_config = {0};
 
 void water_ctl_configure(void)
@@ -37,12 +38,12 @@ void water_ctl_configure(void)
 	{
 	    water_config.analog_voltage_max = ANALOG_VOLTAGE_MAX_DEFAULT;
 	    water_config.threshold = THRESHOLD_VALUE_DEFAULT;
+	    water_config.duration = WATER_DURATION_DEFAULT;
 
 	    app_nvs_save_water_configs();
 
 		ESP_LOGI(TAG, "Unable to water configuration, use default value instead");
 	}
-
 
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(WATER_GPIO, GPIO_MODE_OUTPUT);
@@ -70,11 +71,6 @@ void water_ctl_off(void)
 uint8_t water_ctl_is_on(void)
 {
 	return s_water_state == WATER_STATUS_ON;
-}
-
-uint8_t water_ctl_is_off(void)
-{
-	return s_water_state == WATER_STATUS_OFF;
 }
 
 water_config_t *water_ctl_get_config(void)

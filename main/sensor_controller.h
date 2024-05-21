@@ -17,7 +17,9 @@ typedef enum sensor_ctl_message
 {
 	SENSOR_CTL_INIT = 0,
 	SENSOR_CTL_WATER_ON,
-	SENSOR_CTL_WATER_OFF
+	SENSOR_CTL_WATER_OFF,
+	SENSOR_CTL_WATER_ON_BY_USER,
+	SENSOR_CTL_WATER_OFF_BY_USER
 } sensor_ctl_message_e;
 
 /**
@@ -41,6 +43,12 @@ void SENSOR_CTRL_task_start(void);
  * @note Expand the parameter list based on your requirements e.g. how you've expanded the sensor_ctl_queue_message_t.
  */
 BaseType_t sensor_ctl_monitor_send_message(sensor_ctl_message_e msgID);
+
+
+/**
+ * Timer callback function which turn off water.
+ */
+void sensor_ctl_water_turn_off_callback(void *arg);
 
 
 #endif /* MAIN_SENSOR_CONTROLLER_H_ */

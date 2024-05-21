@@ -13,6 +13,8 @@
 #include "lwip/ip4_addr.h"
 #include "sys/param.h"
 
+#include "app_nvs.h"
+#include "sensor_controller.h"
 #include "water_ctl.h"
 #include "water_humidity_oneshot.h"
 #include "ds3231.h"
@@ -346,20 +348,40 @@ esp_err_t http_server_OTA_status_handler(httpd_req_t *req)
 }
 
 /**
- * DHT sensor readings JSON handler responds with DHT22 sensor data
+ * ESP status readings JSON handler responds with DHT22 sensor data
  * @param req HTTP request for which the uri needs to be handled
  * @return ESP_OK
  */
-static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *req)
+static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req)
 {
 	ESP_LOGI(TAG, "/dhtSensor.json requested");
 
-	char dhtSensorJSON[128];
+	water_config_t* water_config = water_ctl_get_config();
 
-	sprintf(dhtSensorJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%.2f%%\"}", DHT22_get_temperature(), DHT22_get_humidity(), water_ctl_get_soil_humidity());
+	char espStatusJSON[128];
+	char s_on[] = "ON";
+	char s_off[] = "OFF";
+	char *status;
+
+	if (water_ctl_is_on())
+	{
+		status = s_on;
+	}
+	else
+	{
+		status = s_off;
+	}
+
+	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_humidity\": \"%.2f%%\", \"water_status\": \"%s\", \"threshold\": \"%d\", \"duration\": \"%d\"}",
+			DHT22_get_temperature(),
+			DHT22_get_humidity(),
+			water_ctl_get_soil_humidity(),
+			status,
+			water_config->threshold,
+			water_config->duration);
 
 	httpd_resp_set_type(req, "application/json");
-	httpd_resp_send(req, dhtSensorJSON, strlen(dhtSensorJSON));
+	httpd_resp_send(req, espStatusJSON, strlen(espStatusJSON));
 
 	return ESP_OK;
 }
@@ -424,22 +446,9 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_max_voltage = 0, len_threshold_voltage;
-	char *max_voltage_str = NULL, *threshold_voltage_str = NULL;
-	float max_voltage = 0.0, threshold_voltage = 0.0;
-
-	// Get max voltage header
-	len_max_voltage = httpd_req_get_hdr_value_len(req, "max-voltage") + 1;
-	if (len_max_voltage > 1)
-	{
-		max_voltage_str = malloc(len_max_voltage);
-		if (httpd_req_get_hdr_value_str(req, "max-voltage", max_voltage_str, len_max_voltage) == ESP_OK)
-		{
-			ESP_LOGI(TAG, "water_configure_json_handler: Found header => max-voltage: %s", max_voltage_str);
-		}
-		max_voltage = atoi(max_voltage_str);
-		water_config->analog_voltage_max = max_voltage;
-	}
+	size_t len_duration = 0, len_threshold_voltage;
+	char *duration_str = NULL, *threshold_voltage_str = NULL;
+	float duration = 0.0, threshold_voltage = 0.0;
 
 	// Get max voltage header
 	len_threshold_voltage = httpd_req_get_hdr_value_len(req, "threshold-voltage") + 1;
@@ -454,8 +463,52 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 		water_config->threshold = threshold_voltage;
 	}
 
+	// Get duration header
+	len_duration = httpd_req_get_hdr_value_len(req, "duration") + 1;
+	if (len_duration > 1)
+	{
+		duration_str = malloc(len_duration);
+		if (httpd_req_get_hdr_value_str(req, "max-voltage", duration_str, len_duration) == ESP_OK)
+		{
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => duration: %s", duration_str);
+		}
+		duration = atoi(duration_str);
+		water_config->duration = duration;
+	}
+
+    app_nvs_save_water_configs();
+
 	return ESP_OK;
 }
+
+
+/**
+ * toggleWaterOnOff.json handler is invoked after the turn water on/off button is pressed
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t toggle_water_on_off_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/triggerWaterOnOff.json requested");
+
+	char espWaterStatusJSON[128];
+
+	if (water_ctl_is_on())
+	{
+		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF_BY_USER);
+		sprintf(espWaterStatusJSON, "{\"water_status\":\"OFF\"}");
+	}
+	else {
+		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON_BY_USER);
+		sprintf(espWaterStatusJSON, "{\"water_status\":\"ON\"}");
+	}
+
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_send(req, espWaterStatusJSON, strlen(espWaterStatusJSON));
+
+	return ESP_OK;
+}
+
 
 
 /**
@@ -702,9 +755,9 @@ static httpd_handle_t http_server_configure(void)
 
 		// register dhtSensor.json handler
 		httpd_uri_t dht_sensor_json = {
-				.uri = "/dhtSensor.json",
+				.uri = "/ESPServerStatus.json",
 				.method = HTTP_GET,
-				.handler = http_server_get_dht_sensor_readings_json_handler,
+				.handler = http_server_get_esp_server_status_json_handler,
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &dht_sensor_json);
@@ -770,6 +823,14 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &save_water_configure_json);
+
+		httpd_uri_t trigger_water_on_off_json = {
+				.uri = "/toggleWaterOnOff.json",
+				.method = HTTP_GET,
+				.handler = toggle_water_on_off_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &trigger_water_on_off_json);
 
 		return http_server_handle;
 	}

@@ -11,7 +11,7 @@ var wifiConnectInterval = null;
 $(document).ready(function() {
 	getSSID();
 	getUpdateStatus();
-	startDHTSensorInterval();
+	startESPServerStatusInterval();
 	startLocalTimeInterval();
 	getConnectInfo();
 	$("#connect_wifi").on("click", function(){
@@ -23,6 +23,9 @@ $(document).ready(function() {
 	$("#disconnect_wifi").on("click", function(){
 		disconnectWifi();
 	}); 
+	$("#manual_water_btn").on("click", function() {
+		toggle_water_on_off();
+	});
 });   
 
 /**
@@ -135,21 +138,26 @@ function otaRebootTimer()
 /**
  * Gets DHT22 sensor temperature and humidity values for display on the web page.
  */
-function getDHTSensorValues()
+function getESPServerStatus()
 {
-	$.getJSON('/dhtSensor.json', function(data) {
+	$.getJSON('/ESPServerStatus.json', function(data) {
 		$("#temperature_reading").text(data["temp"]);
 		$("#humidity_reading").text(data["humidity"]);
 		$("#soil_humidity_reading").text(data["soil_humidity"]);
+
+		$("#humidity").text(data["threshold"]);
+		$("#duration").text(data["duration"]);
+		
+		setWaterButtonStatus(data["water_status"]);
 	});
 }
 
 /**
  * Sets the interval for getting the updated DHT22 sensor values.
  */
-function startDHTSensorInterval()
+function startESPServerStatusInterval()
 {
-	setInterval(getDHTSensorValues, 5000);    
+	setInterval(getESPServerStatus, 5000);    
 }
 
 /**
@@ -228,7 +236,7 @@ function connectWifi()
 
 function saveWaterConfigure()
 {
-	max_voltage = $("#max_voltage").val();
+	duration = $("#duration").val();
 	threshold_voltage = $("#threshold_voltage").val();
 
 	$.ajax({
@@ -236,7 +244,7 @@ function saveWaterConfigure()
 		dataType: 'json',
 		method: 'POST',
 		cache: false,
-		headers: {'max-voltage': max_voltage, 'threshold-voltage': threshold_voltage},
+		headers: {'duration': duration, 'threshold-voltage': threshold_voltage},
 		data: {'timestamp': Date.now()}
 	});
 }
@@ -357,6 +365,35 @@ function getLocalTime()
     }).then(response => response.json()).then(data => {
     	$("#local_time").text(data["time"]);
     });
+}
+
+/**
+ * Toggle water on/off
+ * @note manual toggle water on/off
+ */
+function toggle_water_on_off()
+{
+	var requestURL = "/toggleWaterOnOff.json";
+	
+    fetch(requestURL, {
+    	method: 'GET',
+		cache: 'no-cache'
+    }).then(response => response.json()).then(data => {
+    	setWaterButtonStatus(data["water_status"]);
+    });
+}
+
+
+function setWaterButtonStatus(status)
+{
+	if (status && status === "ON")
+	{
+		$("#manual_water_btn").val("Turn off water");
+	}
+	else if (status && status === "OFF")
+	{
+		$("#manual_water_btn").val("Turn on water");
+	}
 }
 
 /**

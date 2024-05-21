@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/task.h"
+#include "esp_timer.h"
 #include "esp_system.h"
 #include "driver/gpio.h"
 #include "lwip/ip4_addr.h"
@@ -22,12 +24,37 @@
 
 // Tag used for ESP serial console messages
 static const char TAG[] = "sensor_ctl";
+/**
+ * Water event group handle and status bits
+ */
+static EventGroupHandle_t water_event_group;
+const int WATER_ON_AUTO_BIT			= BIT0;
+const int WATER_ON_BY_USER_BIT		= BIT1;
+const int WATER_ON_PROGRESS_BIT		= BIT2;
+
+static const uint64_t one_min_in_us = 60000000;
+
+/**
+ * ESP32 timer configuration passed to esp_timer_create.
+ */
+const esp_timer_create_args_t water_on_period_args = {
+		.callback = &sensor_ctl_water_turn_off_callback,
+		.arg = NULL,
+		.dispatch_method = ESP_TIMER_TASK,
+		.name = "fw_update_reset"
+};
+esp_timer_handle_t water_on_period;
 
 // Sensor monitor task handle
 static TaskHandle_t task_sensor_monitor = NULL;
 
 // Queue handle used to manipulate the sensor queue of events
 static QueueHandle_t sensor_ctl_monitor_queue_handle;
+
+void sensor_ctl_water_turn_off_callback(void *arg)
+{
+	sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
+}
 
 /**
  * HTTP server monitor task used to track events of the HTTP server
@@ -36,6 +63,7 @@ static QueueHandle_t sensor_ctl_monitor_queue_handle;
 static void sensor_ctrl_monitor(void *parameter)
 {
 	sensor_ctl_queue_message_t msg;
+	water_config_t *water_config = NULL;
 
 	for (;;)
 	{
@@ -50,10 +78,16 @@ static void sensor_ctrl_monitor(void *parameter)
 
 			case SENSOR_CTL_WATER_ON:
 
-				if (water_ctl_is_off())
+				if (!water_ctl_is_on())
 				{
 					ESP_LOGI(TAG, "SENSOR_CTL_WATER_ON");
 					water_ctl_on();
+					xEventGroupSetBits(water_event_group, WATER_ON_AUTO_BIT);
+					xEventGroupSetBits(water_event_group, WATER_ON_PROGRESS_BIT);
+
+					water_config = water_ctl_get_config();
+					ESP_ERROR_CHECK(esp_timer_create(&water_on_period_args, &water_on_period));
+					ESP_ERROR_CHECK(esp_timer_start_once(water_on_period, one_min_in_us * water_config->duration));
 				}
 
 				break;
@@ -63,6 +97,40 @@ static void sensor_ctrl_monitor(void *parameter)
 				if (water_ctl_is_on()) {
 					ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF");
 					water_ctl_off();
+					xEventGroupClearBits(water_event_group, WATER_ON_AUTO_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_BY_USER_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_PROGRESS_BIT);
+					ESP_ERROR_CHECK(esp_timer_stop(water_on_period));
+				}
+
+				break;
+
+			case SENSOR_CTL_WATER_ON_BY_USER:
+
+				if (!water_ctl_is_on())
+				{
+					ESP_LOGI(TAG, "SENSOR_CTL_WATER_ON_BY_USER");
+					water_ctl_on();
+					xEventGroupSetBits(water_event_group, WATER_ON_BY_USER_BIT);
+					xEventGroupSetBits(water_event_group, WATER_ON_PROGRESS_BIT);
+
+					water_config = water_ctl_get_config();
+					ESP_ERROR_CHECK(esp_timer_create(&water_on_period_args, &water_on_period));
+					ESP_ERROR_CHECK(esp_timer_start_once(water_on_period, one_min_in_us * water_config->duration));
+				}
+
+				break;
+
+			case SENSOR_CTL_WATER_OFF_BY_USER:
+
+				if (water_ctl_is_on())
+				{
+					ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF_BY_USER");
+					water_ctl_off();
+					xEventGroupClearBits(water_event_group, WATER_ON_AUTO_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_BY_USER_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_PROGRESS_BIT);
+					ESP_ERROR_CHECK(esp_timer_stop(water_on_period));
 				}
 
 				break;
@@ -76,18 +144,30 @@ static void sensor_ctrl_monitor(void *parameter)
 }
 
 void automatic_watering_decision(void) {
-	water_config_t *water_config = water_ctl_get_config();
-	float ival = water_ctl_get_soil_humidity();
+	water_config_t *water_config = NULL;
+	float ival = 0.0;
+	EventBits_t eventBits;
 
 //	ESP_LOGI(TAG, "ival: %.2f%%", ival);
 
-	if (ival < water_config->threshold)
+	eventBits = xEventGroupGetBits(water_event_group);
+	if (eventBits & WATER_ON_PROGRESS_BIT)
 	{
-		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
+		ESP_LOGI(TAG, "Watering...");
 	}
 	else
 	{
-		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
+		water_config = water_ctl_get_config();
+		ival = water_ctl_get_soil_humidity();
+
+		if (ival < water_config->threshold)
+		{
+			sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
+		}
+		else
+		{
+			sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
+		}
 	}
 }
 
@@ -100,6 +180,9 @@ static void sensor_ctrl_task(void *pvParameter)
 	water_humidity_init();
 
 	sensor_ctl_monitor_send_message(SENSOR_CTL_INIT);
+
+	// Create water event group
+	water_event_group = xEventGroupCreate();
 
 	for (;;)
 	{
