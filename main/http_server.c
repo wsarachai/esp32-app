@@ -468,7 +468,7 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 	if (len_duration > 1)
 	{
 		duration_str = malloc(len_duration);
-		if (httpd_req_get_hdr_value_str(req, "max-voltage", duration_str, len_duration) == ESP_OK)
+		if (httpd_req_get_hdr_value_str(req, "duration", duration_str, len_duration) == ESP_OK)
 		{
 			ESP_LOGI(TAG, "water_configure_json_handler: Found header => duration: %s", duration_str);
 		}

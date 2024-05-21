@@ -5,6 +5,10 @@ var seconds 	= null;
 var otaTimerVar =  null;
 var wifiConnectInterval = null;
 
+function isEmpty(val){
+    return (val === undefined || val == null || val.length <= 0) ? true : false;
+}
+
 /**
  * Initialize functions here.
  */
@@ -145,8 +149,12 @@ function getESPServerStatus()
 		$("#humidity_reading").text(data["humidity"]);
 		$("#soil_humidity_reading").text(data["soil_humidity"]);
 
-		$("#humidity").text(data["threshold"]);
-		$("#duration").text(data["duration"]);
+		if (isEmpty($("#threshold_voltage").val())) {
+			$("#threshold_voltage").val(data["threshold"]);
+		}
+		if (isEmpty($("#duration").val())) {
+			$("#duration").val(data["duration"]);
+		}
 		
 		setWaterButtonStatus(data["water_status"]);
 	});
