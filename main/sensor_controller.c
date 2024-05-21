@@ -53,7 +53,7 @@ static QueueHandle_t sensor_ctl_monitor_queue_handle;
 
 void sensor_ctl_water_turn_off_callback(void *arg)
 {
-	sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
+	sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF_BY_TIMER);
 }
 
 /**
@@ -131,6 +131,19 @@ static void sensor_ctrl_monitor(void *parameter)
 					xEventGroupClearBits(water_event_group, WATER_ON_BY_USER_BIT);
 					xEventGroupClearBits(water_event_group, WATER_ON_PROGRESS_BIT);
 					ESP_ERROR_CHECK(esp_timer_stop(water_on_period));
+				}
+
+				break;
+
+			case SENSOR_CTL_WATER_OFF_BY_TIMER:
+
+				if (water_ctl_is_on())
+				{
+					ESP_LOGI(TAG, "SENSOR_CTL_WATER_OFF_BY_TIMER");
+					water_ctl_off();
+					xEventGroupClearBits(water_event_group, WATER_ON_AUTO_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_BY_USER_BIT);
+					xEventGroupClearBits(water_event_group, WATER_ON_PROGRESS_BIT);
 				}
 
 				break;
