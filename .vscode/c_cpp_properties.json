@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/Espressif/frameworks/esp-idf-v5.2.1/**"
+                "/Volumes/Seagate/workspaces/esp/esp-idf/**",
+                "${workspaceFolder}/esp-aws-iot/**"
             ],
             "defines": [
                 "_DEBUG",

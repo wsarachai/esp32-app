@@ -4,7 +4,10 @@
         "esp_err.h": "c",
         "rgb_led.h": "c",
         "wifi_app.h": "c",
-        "http_server.h": "c"
+        "http_server.h": "c",
+        "aws_iot_mqtt_client_interface.h": "c",
+        "aws_iot_version.h": "c",
+        "aws_iot_config.h": "c"
     },
     "idf.adapterTargetName": "esp32"
 }
