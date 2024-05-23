@@ -1,2 +1,5 @@
 build/
 esp-aws-iot/
+
+main/certs/certificate_pem_crt
+main/certs/private_pem_key
