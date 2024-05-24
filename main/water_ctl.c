@@ -78,7 +78,7 @@ water_config_t *water_ctl_get_config(void)
 	return &water_config;
 }
 
-float water_ctl_get_soil_humidity(void)
+float water_ctl_get_soil_moisture(void)
 {
 	float current_voltage = water_humidity_get_voltage();
 

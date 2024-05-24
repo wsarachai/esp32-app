@@ -171,7 +171,7 @@ void automatic_watering_decision(void) {
 	else
 	{
 		water_config = water_ctl_get_config();
-		ival = water_ctl_get_soil_humidity();
+		ival = water_ctl_get_soil_moisture();
 
 		if (ival < water_config->threshold)
 		{

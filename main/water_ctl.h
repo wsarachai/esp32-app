@@ -34,6 +34,6 @@ uint8_t water_ctl_is_on(void);
 
 water_config_t *water_ctl_get_config(void);
 
-float water_ctl_get_soil_humidity(void);
+float water_ctl_get_soil_moisture(void);
 
 #endif /* MAIN_WATER_CTL_H_ */

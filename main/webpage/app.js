@@ -147,7 +147,7 @@ function getESPServerStatus()
 	$.getJSON('/ESPServerStatus.json', function(data) {
 		$("#temperature_reading").text(data["temp"]);
 		$("#humidity_reading").text(data["humidity"]);
-		$("#soil_humidity_reading").text(data["soil_humidity"]);
+		$("#soil_moisture_reading").text(data["soil_moisture"]);
 
 		if (isEmpty($("#threshold_voltage").val())) {
 			$("#threshold_voltage").val(data["threshold"]);
