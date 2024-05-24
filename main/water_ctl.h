@@ -10,7 +10,7 @@
 
 
 #define ANALOG_VOLTAGE_MAX_DEFAULT		3300 // 3.3v
-#define THRESHOLD_VALUE_DEFAULT			30   // 30%
+#define REQUIRED_MOI_LEVEL_DEFAULT		30   // 30%
 #define WATER_DURATION_DEFAULT			1    // one minute
 
 /**
