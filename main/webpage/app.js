@@ -149,8 +149,8 @@ function getESPServerStatus()
 		$("#humidity_reading").text(data["humidity"]);
 		$("#soil_moisture_reading").text(data["soil_moisture"]);
 
-		if (isEmpty($("#threshold_voltage").val())) {
-			$("#threshold_voltage").val(data["threshold"]);
+		if (isEmpty($("#required_moiture_level").val())) {
+			$("#required_moiture_level").val(data["required_moiture_level"]);
 		}
 		if (isEmpty($("#duration").val())) {
 			$("#duration").val(data["duration"]);
@@ -245,14 +245,14 @@ function connectWifi()
 function saveWaterConfigure()
 {
 	duration = $("#duration").val();
-	threshold_voltage = $("#threshold_voltage").val();
+	required_moiture_level = $("#required_moiture_level").val();
 
 	$.ajax({
 		url: '/saveWaterConfigure.json',
 		dataType: 'json',
 		method: 'POST',
 		cache: false,
-		headers: {'duration': duration, 'threshold-voltage': threshold_voltage},
+		headers: {'duration': duration, 'required-moiture-level': required_moiture_level},
 		data: {'timestamp': Date.now()}
 	});
 }

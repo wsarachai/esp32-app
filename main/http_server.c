@@ -358,7 +358,7 @@ static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	char espStatusJSON[128];
+	char espStatusJSON[200];
 	char s_on[] = "ON";
 	char s_off[] = "OFF";
 	char *status;
@@ -372,12 +372,12 @@ static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req
 		status = s_off;
 	}
 
-	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f%%\", \"water_status\": \"%s\", \"threshold\": \"%d\", \"duration\": \"%d\"}",
+	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f%%\", \"water_status\": \"%s\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\"}",
 			DHT22_get_temperature(),
 			DHT22_get_humidity(),
 			water_ctl_get_soil_moisture(),
 			status,
-			water_config->threshold,
+			water_config->required_moiture_level,
 			water_config->duration);
 
 	httpd_resp_set_type(req, "application/json");
@@ -436,7 +436,7 @@ static esp_err_t http_server_wifi_connect_json_handler(httpd_req_t *req)
 
 /**
  * saveWaterConfigure.json handler is invoked after the connect button is pressed
- * and handles receiving the max voltage and voltage threshold entered by the user
+ * and handles receiving the max voltage and voltage required moiture level entered by the user
  * @param req HTTP request for which the uri needs to be handled.
  * @return ESP_OK
  */
@@ -446,21 +446,21 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_duration = 0, len_threshold_voltage;
-	char *duration_str = NULL, *threshold_voltage_str = NULL;
-	float duration = 0.0, threshold_voltage = 0.0;
+	size_t len_duration = 0, len_required_moisture_level;
+	char *duration_str = NULL, *required_moisture_level_str = NULL;
+	float duration = 0.0, required_moisture_level = 0.0;
 
 	// Get max voltage header
-	len_threshold_voltage = httpd_req_get_hdr_value_len(req, "threshold-voltage") + 1;
-	if (len_threshold_voltage > 1)
+	len_required_moisture_level = httpd_req_get_hdr_value_len(req, "required-moiture-level") + 1;
+	if (len_required_moisture_level > 1)
 	{
-		threshold_voltage_str = malloc(len_threshold_voltage);
-		if (httpd_req_get_hdr_value_str(req, "threshold-voltage", threshold_voltage_str, len_threshold_voltage) == ESP_OK)
+		required_moisture_level_str = malloc(len_required_moisture_level);
+		if (httpd_req_get_hdr_value_str(req, "required-moiture-level", required_moisture_level_str, len_required_moisture_level) == ESP_OK)
 		{
-			ESP_LOGI(TAG, "water_configure_json_handler: Found header => threshold-voltage: %s", threshold_voltage_str);
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => required-moiture-level: %s", required_moisture_level_str);
 		}
-		threshold_voltage = atoi(threshold_voltage_str);
-		water_config->threshold = threshold_voltage;
+		required_moisture_level = atoi(required_moisture_level_str);
+		water_config->required_moiture_level = required_moisture_level;
 	}
 
 	// Get duration header

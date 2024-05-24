@@ -37,7 +37,7 @@ void water_ctl_configure(void)
 	else
 	{
 	    water_config.analog_voltage_max = ANALOG_VOLTAGE_MAX_DEFAULT;
-	    water_config.threshold = THRESHOLD_VALUE_DEFAULT;
+	    water_config.required_moiture_level = THRESHOLD_VALUE_DEFAULT;
 	    water_config.duration = WATER_DURATION_DEFAULT;
 
 	    app_nvs_save_water_configs();

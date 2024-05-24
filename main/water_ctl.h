@@ -19,7 +19,7 @@
 typedef struct water_config
 {
 	int16_t analog_voltage_max;
-	int16_t threshold;
+	int16_t required_moiture_level;
 	int16_t duration; // minute
 
 } water_config_t;

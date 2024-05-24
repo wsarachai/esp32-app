@@ -173,7 +173,7 @@ void automatic_watering_decision(void) {
 		water_config = water_ctl_get_config();
 		ival = water_ctl_get_soil_moisture();
 
-		if (ival < water_config->threshold)
+		if (ival < water_config->required_moiture_level)
 		{
 			sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
 		}
