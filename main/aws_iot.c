@@ -143,6 +143,7 @@ void aws_iot_task(void *param) {
     connectParams.clientIDLen = (uint16_t) strlen(CONFIG_AWS_EXAMPLE_CLIENT_ID);
     connectParams.isWillMsgPresent = false;
 
+    int tried = 0;
     ESP_LOGI(TAG, "Connecting to AWS...");
     do {
         rc = aws_iot_mqtt_connect(&client, &connectParams);
@@ -150,65 +151,74 @@ void aws_iot_task(void *param) {
             ESP_LOGE(TAG, "Error(%d) connecting to %s:%d", rc, mqttInitParams.pHostURL, mqttInitParams.port);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
+        if (++tried > 5) {
+        	break;
+        }
     } while(SUCCESS != rc);
 
-    /*
-     * Enable Auto Reconnect functionality. Minimum and Maximum time of Exponential backoff are set in aws_iot_config.h
-     *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
-     *  #AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL
-     */
-    rc = aws_iot_mqtt_autoreconnect_set_status(&client, true);
-    if(SUCCESS != rc) {
-        ESP_LOGE(TAG, "Unable to set Auto Reconnect to true - %d", rc);
-        abort();
+    if (SUCCESS == rc)
+    {
+		/*
+		 * Enable Auto Reconnect functionality. Minimum and Maximum time of Exponential backoff are set in aws_iot_config.h
+		 *  #AWS_IOT_MQTT_MIN_RECONNECT_WAIT_INTERVAL
+		 *  #AWS_IOT_MQTT_MAX_RECONNECT_WAIT_INTERVAL
+		 */
+		rc = aws_iot_mqtt_autoreconnect_set_status(&client, true);
+		if(SUCCESS != rc) {
+			ESP_LOGE(TAG, "Unable to set Auto Reconnect to true - %d", rc);
+			abort();
+		}
+
+		const char *TOPIC = "test_topic/esp32";
+		const int TOPIC_LEN = strlen(TOPIC);
+
+		ESP_LOGI(TAG, "Subscribing...");
+		rc = aws_iot_mqtt_subscribe(&client, TOPIC, TOPIC_LEN, QOS0, iot_subscribe_callback_handler, NULL);
+		if(SUCCESS != rc) {
+			ESP_LOGE(TAG, "Error subscribing : %d ", rc);
+			abort();
+		}
+
+		sprintf(cPayload, "%s : %ld ", "hello from SDK", i);
+
+		paramsQOS0.qos = QOS0;
+		paramsQOS0.payload = (void *) cPayload;
+		paramsQOS0.isRetained = 0;
+
+		paramsQOS1.qos = QOS1;
+		paramsQOS1.payload = (void *) cPayload;
+		paramsQOS1.isRetained = 0;
+
+		while((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)) {
+
+			//Max time the yield function will wait for read messages
+			rc = aws_iot_mqtt_yield(&client, 100);
+			if(NETWORK_ATTEMPTING_RECONNECT == rc) {
+				// If the client is attempting to reconnect we will skip the rest of the loop.
+				continue;
+			}
+
+			ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetName(NULL), uxTaskGetStackHighWaterMark(NULL));
+			vTaskDelay(3000 / portTICK_PERIOD_MS);
+			sprintf(cPayload, "%s : %d ", "WiFi RSSI", wifi_app_get_rssi());
+			paramsQOS0.payloadLen = strlen(cPayload);
+			rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS0);
+
+			sprintf(cPayload, "%s : %.1f, %s : %.1f", "Temperature", DHT22_get_temperature(), "Humidity", DHT22_get_humidity());
+			paramsQOS1.payloadLen = strlen(cPayload);
+			rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS1);
+			if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {
+				ESP_LOGW(TAG, "QOS1 publish ack not received.");
+				rc = SUCCESS;
+			}
+		}
+
+		ESP_LOGE(TAG, "An error occurred in the main loop.");
+		abort();
     }
 
-    const char *TOPIC = "test_topic/esp32";
-    const int TOPIC_LEN = strlen(TOPIC);
-
-    ESP_LOGI(TAG, "Subscribing...");
-    rc = aws_iot_mqtt_subscribe(&client, TOPIC, TOPIC_LEN, QOS0, iot_subscribe_callback_handler, NULL);
-    if(SUCCESS != rc) {
-        ESP_LOGE(TAG, "Error subscribing : %d ", rc);
-        abort();
-    }
-
-    sprintf(cPayload, "%s : %ld ", "hello from SDK", i);
-
-    paramsQOS0.qos = QOS0;
-    paramsQOS0.payload = (void *) cPayload;
-    paramsQOS0.isRetained = 0;
-
-    paramsQOS1.qos = QOS1;
-    paramsQOS1.payload = (void *) cPayload;
-    paramsQOS1.isRetained = 0;
-
-    while((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)) {
-
-        //Max time the yield function will wait for read messages
-        rc = aws_iot_mqtt_yield(&client, 100);
-        if(NETWORK_ATTEMPTING_RECONNECT == rc) {
-            // If the client is attempting to reconnect we will skip the rest of the loop.
-            continue;
-        }
-
-        ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
-        sprintf(cPayload, "%s : %d ", "WiFi RSSI", wifi_app_get_rssi());
-        paramsQOS0.payloadLen = strlen(cPayload);
-        rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS0);
-
-        sprintf(cPayload, "%s : %.1f, %s : %.1f", "Temperature", DHT22_get_temperature(), "Humidity", DHT22_get_humidity());
-        paramsQOS1.payloadLen = strlen(cPayload);
-        rc = aws_iot_mqtt_publish(&client, TOPIC, TOPIC_LEN, &paramsQOS1);
-        if (rc == MQTT_REQUEST_TIMEOUT_ERROR) {
-            ESP_LOGW(TAG, "QOS1 publish ack not received.");
-            rc = SUCCESS;
-        }
-    }
-
-    ESP_LOGE(TAG, "An error occurred in the main loop.");
-    abort();
+    task_aws_iot = NULL;
+    vTaskDelete(NULL);
 }
 
 void aws_iot_start(void)

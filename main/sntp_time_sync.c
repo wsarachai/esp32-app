@@ -50,8 +50,9 @@ static void sntp_time_sync_init_sntp(void)
  * Gets the current time and if the current time is not up to date,
  * the sntp_time_synch_init_sntp function is called.
  */
-static void sntp_time_sync_obtain_time(void)
+static bool sntp_time_sync_obtain_time(void)
 {
+	bool ret = false;
 	time_t now = 0;
 	struct tm time_info = {0};
 	struct tm rtcinfo = {0};
@@ -101,10 +102,12 @@ static void sntp_time_sync_obtain_time(void)
 				}
 				else {
 					ESP_LOGI(TAG, "DS3231 initial date time done");
+					ret = true;
 				}
 			}
 		}
 	}
+	return ret;
 }
 
 /**
@@ -113,9 +116,20 @@ static void sntp_time_sync_obtain_time(void)
  */
 static void sntp_time_sync(void *pvParam)
 {
+	int tried = 0;
 	for (;;)
 	{
-		sntp_time_sync_obtain_time();
+		if (!sntp_time_sync_obtain_time())
+		{
+			if (++tried > 5)
+			{
+				break;
+			}
+		}
+		else
+		{
+			tried = 0;
+		}
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 	}
 
