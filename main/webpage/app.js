@@ -145,6 +145,12 @@ function getESPServerStatus() {
     $("#duration_data").text(data["duration"] + " นาที");
 
     setWaterButtonStatus(data["water_status"]);
+
+    if (data["wifi_connect_status"]) {
+      if (isEmpty($("#connected_ap").text())) {
+        getConnectInfo();
+      }
+    }
   });
 }
 
@@ -192,11 +198,6 @@ function getWifiConnectStatus() {
         $("#wifi_connect_status").addClass("gr");
         stopWifiConnectStatusInterval();
         getConnectInfo();
-
-        setTimeout(() => {
-          $("#wifi_connect_status").fadeOut("slow");
-          $("#connect_info").fadeIn("slow");
-        }, 5000);
       }
     });
 }
@@ -310,6 +311,11 @@ function getConnectInfo() {
 
       $("#gateway_label").html("Gateway: ");
       $("#wifi_connect_gw").text(data["gw"]);
+
+      if ($("#connect_info").is(":hidden")) {
+        $("#wifi_connect_status").fadeOut("slow");
+        $("#connect_info").fadeIn("slow");
+      }
     });
 }
 

@@ -354,7 +354,7 @@ esp_err_t http_server_OTA_status_handler(httpd_req_t *req)
  */
 static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req)
 {
-	ESP_LOGI(TAG, "/dhtSensor.json requested");
+	ESP_LOGI(TAG, "/ESPServerStatus.json requested");
 
 	water_config_t* water_config = water_ctl_get_config();
 
@@ -372,14 +372,15 @@ static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req
 		status = s_off;
 	}
 
-	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f\", \"water_status\": \"%s\", \"min_moiture_level\": \"%d\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\"}",
+	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f\", \"water_status\": \"%s\", \"min_moiture_level\": \"%d\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\", \"wifi_connect_status\": \"%d\"}",
 			DHT22_get_temperature(),
 			DHT22_get_humidity(),
 			water_ctl_get_soil_moisture(),
 			status,
 			water_config->min_moiture_level,
 			water_config->required_moiture_level,
-			water_config->duration);
+			water_config->duration,
+			g_wifi_connect_status);
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, espStatusJSON, strlen(espStatusJSON));
