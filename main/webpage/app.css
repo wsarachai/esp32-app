@@ -64,7 +64,7 @@ h4 {
 	color: green;
 }
 .rd {
-	color: red;
+	color: #ff4500;
 }
 
 /* Sensor container styling */
@@ -92,7 +92,6 @@ h4 {
 
 .sensor-box div {
     font-size: 2em;
-    color: #1d3557;
 }
 
 .temperature::before {
@@ -160,22 +159,34 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
     box-sizing: border-box;
 }
 
-.level_data {
+.data {
     color:#32cd32;
 }
 
-/* Specific styling for inline elements */
-#ap_ssid, #local_time, #latest_firmware,#latest_firmware_label, #temperature_reading, #humidity_reading, #soil_moisture_reading, #connected_ap, #wifi_connect_ip, #wifi_connect_netmask, #wifi_connect_gw {
-    color: #1d3557;
-    display: inline-block;
-}
-#disconnect_wifi {
+.hidden {
 	display: none;
 }
 
-/* Red color for wifi connect status */
-#wifi_connect_status {
-    color: red;
+.flex-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Specific styling for inline elements */
+#ap_ssid, #latest_firmware,#latest_firmware_label, #temperature_reading, #humidity_reading, #soil_moisture_reading, #connected_ap, #wifi_connect_ip, #wifi_connect_netmask, #wifi_connect_gw {
+    display: inline-block;
+}
+
+#disconnect_wifi {
+	background-color: #ff4500;
+}
+
+.time-data {
+    color:#ff4500;
+    font-weight: bold;
+    font-size: 1.0em;
+    margin-right: 10px;
+    display: inline-block;
 }
 
 /* Responsive media queries */

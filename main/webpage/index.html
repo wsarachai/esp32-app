@@ -16,19 +16,22 @@
    
     <main>
         <section id="DHT22Sensor">
-            <h2>ข้อมูลทั่วไป</h2>
+            <div class="flex-container">
+                <h2>ข้อมูลทั่วไป</h2>
+                <div id="local_time" class="time-data"></div>
+            </div>
             <div class="sensor-container">
                 <div class="sensor-box temperature">
-                    <label>อุณหภูมิ:</label>
-                    <div id="temperature_reading"></div>
+                    <label>อุณหภูมิ</label>
+                    <div id="temperature_reading" class="data"></div>
                 </div>
                 <div class="sensor-box humidity">
-                    <label>ความชื้นในอากาศ (%):</label>
-                    <div id="humidity_reading"></div>
+                    <label>ความชื้นในอากาศ</label>
+                    <div id="humidity_reading" class="data"></div>
                 </div>
                 <div class="sensor-box soil-moisture">
-                    <label>ความชื้นในดิน(%):</label>
-                    <div id="soil_moisture_reading"></div>
+                    <label>ความชื้นในดิน</label>
+                    <div id="soil_moisture_reading" class="data"></div>
                 </div>
             </div>
         </section>
@@ -36,11 +39,11 @@
 
         <section id="WaterConfig">
             <h2>กำหนดค่าของระบบ</h2>
-            <label for="min_moiture_level">ความชื้นเปิดวาล์ว (ค่าต่ำสุด): <span id="min_moiture_level_data" class="level_data"></span></label>
+            <label for="min_moiture_level">ความชื้นเปิดวาล์ว (ค่าต่ำสุด): <span id="min_moiture_level_data" class="data"></span></label>
             <input id="min_moiture_level" type="number" maxlength="10" min="0" max="100" value="" placeholder="0-100%">
-            <label for="required_moiture_level">ความชื้นปิดวาล์ว (ค่าสูงสุด): <span id="required_moiture_level_data" class="level_data"></span></label>
+            <label for="required_moiture_level">ความชื้นปิดวาล์ว (ค่าสูงสุด): <span id="required_moiture_level_data" class="data"></span></label>
             <input id="required_moiture_level" type="number" maxlength="10"  min="0" max="100" value="" placeholder="0-100%">
-            <label for="duration">เวลาสูงสุด (หากเกินเวลานี้วาล์วน้ำจะปิดอัตโนมัติ): <span id="duration_data" class="level_data"></span></label>
+            <label for="duration">เวลาสูงสุด (หากเกินเวลานี้วาล์วน้ำจะปิดอัตโนมัติ): <span id="duration_data" class="data"></span></label>
             <input id="duration" type="number" maxlength="10" value="" placeholder="จำนวนนาที">
             <button id="save_water_config">บันทึก</button>
         </section>
@@ -53,19 +56,11 @@
         <hr>
 
 		<section id="EspSSID">
-			<h2>ชื่อ WiFi</h2>
-			<label>Access Point SSID:</label>
+			<h2>ชื่อ WiFi (SSID):</h2>
 			<div id="ap_ssid"></div>
 		</section>
 		<hr>
 		
-		<section id="LocalTime">
-			<h2>เวลา</h2>
-			<label>เชื่อมต่อ WiFi ตามเวลาท้องถิ่น:</label>
-			<div id="local_time"></div>
-		</section>
-		<hr>
-
         <section id="WiFiConnect">
             <h2>เชื่อต่อ WiFi</h2>
             <input id="connect_ssid" type="text" maxlength="32" placeholder="SSID" value="">
@@ -73,16 +68,14 @@
             <label><input type="checkbox" onclick="showPassword()">แสดง Password</label>
             <button id="connect_wifi">เชื่อมต่อ</button>
             <div id="wifi_connect_credentials_errors"></div>
-            <h4 id="wifi_connect_status"></h4>
-            
+            <h4 id="wifi_connect_status" class="hidden"></h4>
         </section>
 
-        <section id="connect_info">
-            <div id="connected_ap_label"></div> <div id="connected_ap"></div>
-            <div id="ip_address_label"></div> <div id="wifi_connect_ip"></div>
-		    <div id="netmask_label"></div> <div id="wifi_connect_netmask"></div>
-		    <div id="gateway_label"></div> <div id="wifi_connect_gw"></div>
-         
+        <section id="connect_info" class="hidden">
+            <div id="connected_ap_label"></div> <div id="connected_ap" class="data"></div>
+            <div id="ip_address_label"></div> <div id="wifi_connect_ip" class="data"></div>
+		    <div id="netmask_label"></div> <div id="wifi_connect_netmask" class="data"></div>
+		    <div id="gateway_label"></div> <div id="wifi_connect_gw" class="data"></div>
             <button id="disconnect_wifi">Disconnect</button>
         </section>
         <hr>

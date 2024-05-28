@@ -351,7 +351,8 @@ static void wifi_app_task(void *pvParameters)
 					else
 					{
 						ESP_LOGI(TAG, "WIFI_APP_MSG_STA_DISCONNECTED: ATTEMPT FAILED, CHECK WIFI ACCESS POINT AVAILABILITY");
-						// Adjust this case to your needs - maybe you want to keep trying to connect...
+						// Adjust this case - maybe we want to keep trying to connect...
+						http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_FAIL);
 					}
 
 					if (eventBits & WIFI_APP_STA_CONNECTED_GOT_IP_BIT)
