@@ -9,9 +9,10 @@
 #define MAIN_WATER_CTL_H_
 
 
-#define ANALOG_VOLTAGE_MAX_DEFAULT		3300 // 3.3v
-#define REQUIRED_MOI_LEVEL_DEFAULT		30   // 30%
-#define WATER_DURATION_DEFAULT			1    // one minute
+#define ANALOG_VOLTAGE_MAX_DEFAULT		3300 	// 3.3v
+#define MIN_MOI_LEVEL_DEFAULT			10		// 10%
+#define REQUIRED_MOI_LEVEL_DEFAULT		35   	// 35%
+#define WATER_DURATION_DEFAULT			20   	// one minute
 
 /**
  * Structure for the water parameters
@@ -19,6 +20,7 @@
 typedef struct water_config
 {
 	int16_t analog_voltage_max;
+	int16_t min_moiture_level;
 	int16_t required_moiture_level;
 	int16_t duration; // minute
 

@@ -1,99 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<script src='jquery-3.3.1.min.js'></script>
-		<link rel="stylesheet" href="app.css">
-		<script async src="app.js"></script>
-		<title>ESP32 IoT Project</title>
-	</head>
-	<body>
-	<header>
-		<h1>ESP32 Application Development</h1>
-	</header>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <script src='jquery-3.3.1.min.js'></script>
+    <link rel="stylesheet" href="app.css">
+    <script async src="app.js"></script>
+    <title>ชื่อโครงการ</title>
+</head>
+<body>
+    <header>
+        <h1>ระบบสั่งจ่ายน้ำอัตโนมัติ</h1>
+    </header>
+   
+    <main>
+        <section id="DHT22Sensor">
+            <h2>ข้อมูลทั่วไป</h2>
+            <div class="sensor-container">
+                <div class="sensor-box temperature">
+                    <label>อุณหภูมิ:</label>
+                    <div id="temperature_reading"></div>
+                </div>
+                <div class="sensor-box humidity">
+                    <label>ความชื้นในอากาศ (%):</label>
+                    <div id="humidity_reading"></div>
+                </div>
+                <div class="sensor-box soil-moisture">
+                    <label>ความชื้นในดิน(%):</label>
+                    <div id="soil_moisture_reading"></div>
+                </div>
+            </div>
+        </section>
+        <hr>
 
-	<div id="EspSSID">
-		<h2>ESP32 SSID</h2>
-		<span for="ap_ssid">Access Point SSID: </span>
-		<div id="ap_ssid"></div>
-	</div>
-	<hr>
+        <section id="WaterConfig">
+            <h2>กำหนดค่าของระบบ</h2>
+            <label for="min_moiture_level">ความชื้นเปิดวาล์ว (ค่าต่ำสุด): <span id="min_moiture_level_data" class="level_data"></span></label>
+            <input id="min_moiture_level" type="number" maxlength="10" min="0" max="100" value="" placeholder="0-100%">
+            <label for="required_moiture_level">ความชื้นปิดวาล์ว (ค่าสูงสุด): <span id="required_moiture_level_data" class="level_data"></span></label>
+            <input id="required_moiture_level" type="number" maxlength="10"  min="0" max="100" value="" placeholder="0-100%">
+            <label for="duration">เวลาสูงสุด (หากเกินเวลานี้วาล์วน้ำจะปิดอัตโนมัติ): <span id="duration_data" class="level_data"></span></label>
+            <input id="duration" type="number" maxlength="10" value="" placeholder="จำนวนนาที">
+            <button id="save_water_config">บันทึก</button>
+        </section>
+        <hr>
 
-	<div id="LocalTime">
-		<h2>SNTP Time Synchronization</h2>
-		<span for="local_time">Connect to WiFi for Local Time: </span>
-		<div id="local_time"></div>
-	</div>
-	<hr>
-		
-	<div id="OTA">
-	<h2>ESP32 Firmware Update</h2>
-		<span id="latest_firmware_label">Latest Firmware: </span>
-		<div id="latest_firmware"></div> 
-		<input type="file" id="selected_file" accept=".bin" style="display: none;" onchange="getFileInfo()" />
-		<div class="buttons">
-			<input type="button" value="Select File" onclick="document.getElementById('selected_file').click();" />
-			<input type="button" value="Update Firmware" onclick="updateFirmware()" />
-		</div>
-		<h4 id="file_info"></h4>	
-		<h4 id="ota_update_status"></h4>
-	</div>
-	<hr>
-		
-	<div id="DHT22Sensor">
-		<h2>DHT22 Sensor Readings</h2>
-		<span>Temperature: </span> <div id="temperature_reading"></div>
-		<span>Humidity: </span> <div id="humidity_reading"></div>
-		<span>Soil Moisture: </span> <div id="soil_moisture_reading"></div>
-	</div>
-	<hr>
-			
-	<div id="WaterConfig">
-		<h2>System Configure</h2>
-		<section>
-			<label>Required moisture level of soil [0%-100%]: <input id="required_moiture_level" type="number" maxlenght="10" value=""></label>
-			<label>Duration (Min): <input id="duration" type="number" maxlenght="10" value=""></label>
-			<input id="save_water_config" type="button" value="Save" />
+        <section id="ManualControl">
+            <h2>เปิด/ปิด วาล์วน้ำ</h2>
+            <button id="manual_water_btn">เปิดวาล์ว</button>
+        </section>
+        <hr>
+
+		<section id="EspSSID">
+			<h2>ชื่อ WiFi</h2>
+			<label>Access Point SSID:</label>
+			<div id="ap_ssid"></div>
 		</section>
-	</div>
-	<hr>
+		<hr>
 		
-	<div id="ManualControl">
-		<h2>Manual Control</h2>
-		<div class="buttons">
-			<input id="manual_water_btn" type="button" value="Turn on water" />
-		</div>
-	</div>
-	<hr>
-		
-	<div id="WiFiConnect">
-		<h2>ESP32 WiFi Connect</h2>
-		<section>
-			<input id="connect_ssid" type="text" maxlength="32" placeholder="SSID" value="">
-			<input id="connect_pass" type="password" maxlength="64" placeholder="Password" value="">
-			<input type="checkbox" onclick="showPassword()">Show Password
+		<section id="LocalTime">
+			<h2>เวลา</h2>
+			<label>เชื่อมต่อ WiFi ตามเวลาท้องถิ่น:</label>
+			<div id="local_time"></div>
 		</section>
-		<div class="buttons">
-			<input id="connect_wifi" type="button" value="Connect" />
-		</div>
-		<div id="wifi_connect_credentials_errors"></div>
-		<h4 id="wifi_connect_status"></h4>
-	</div>
+		<hr>
 
-	<div id="ConnectInfo">
-		<section>
-			<div id="connected_ap_label"></div> <div id="connected_ap"></div>
-		</section>
-		<div id="ip_address_label"></div> <div id="wifi_connect_ip"></div>
-		<div id="netmask_label"></div> <div id="wifi_connect_netmask"></div>
-		<div id="gateway_label"></div> <div id="wifi_connect_gw"></div>
-		<div class="buttons">
-			<input id="disconnect_wifi" type="button" value="Disconnect" />
-		</div>
-	</div>
-	<hr>
+        <section id="WiFiConnect">
+            <h2>เชื่อต่อ WiFi</h2>
+            <input id="connect_ssid" type="text" maxlength="32" placeholder="SSID" value="">
+            <input id="connect_pass" type="password" maxlength="64" placeholder="รหัสผ่าน" value="">
+            <label><input type="checkbox" onclick="showPassword()">แสดง Password</label>
+            <button id="connect_wifi">เชื่อมต่อ</button>
+            <div id="wifi_connect_credentials_errors"></div>
+            <h4 id="wifi_connect_status"></h4>
+            
+        </section>
 
-	</body>
-<html>
+        <section id="connect_info">
+            <div id="connected_ap_label"></div> <div id="connected_ap"></div>
+            <div id="ip_address_label"></div> <div id="wifi_connect_ip"></div>
+		    <div id="netmask_label"></div> <div id="wifi_connect_netmask"></div>
+		    <div id="gateway_label"></div> <div id="wifi_connect_gw"></div>
+         
+            <button id="disconnect_wifi">Disconnect</button>
+        </section>
+        <hr>
+
+        <section id="OTA">
+            <h2>อัพเดตเฟิร์มแวร์</h2>
+            <label id="latest_firmware_label">เฟิร์มแวร์ล่าสุด:</label>
+            <div id="latest_firmware"></div>
+            <input type="file" id="selected_file" accept=".bin" style="display: none;" onchange="getFileInfo()" />
+            <div class="buttons">
+                <button onclick="document.getElementById('selected_file').click();">เลือกไฟล์</button>
+                <button onclick="updateFirmware()">อัพเดตเฟิร์มแวร์</button>
+            </div>
+            <h4 id="file_info"></h4>
+            <h4 id="ota_update_status"></h4>
+        </section>
+        <hr>
+    </main>
+</body>
+</html>

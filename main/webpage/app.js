@@ -145,17 +145,14 @@ function otaRebootTimer()
 function getESPServerStatus()
 {
 	$.getJSON('/ESPServerStatus.json', function(data) {
-		$("#temperature_reading").text(data["temp"]);
+		$("#temperature_reading").text(data["temp"] + "°C");
 		$("#humidity_reading").text(data["humidity"]);
-		$("#soil_moisture_reading").text(data["soil_moisture"]);
+		$("#soil_moisture_reading").text(data["soil_moisture"] + "RH(%)");
 
-		if (isEmpty($("#required_moiture_level").val())) {
-			$("#required_moiture_level").val(data["required_moiture_level"]);
-		}
-		if (isEmpty($("#duration").val())) {
-			$("#duration").val(data["duration"]);
-		}
-		
+		$("#min_moiture_level_data").text(data["min_moiture_level"] + "%");
+		$("#required_moiture_level_data").text(data["required_moiture_level"] + "%");
+		$("#duration_data").text(data["duration"] + " นาที");
+				
 		setWaterButtonStatus(data["water_status"]);
 	});
 }
@@ -244,15 +241,20 @@ function connectWifi()
 
 function saveWaterConfigure()
 {
-	duration = $("#duration").val();
-	required_moiture_level = $("#required_moiture_level").val();
+	let min_moiture_level = $("#min_moiture_level").val();
+	let required_moiture_level = $("#required_moiture_level").val();
+	let duration = $("#duration").val();
 
 	$.ajax({
 		url: '/saveWaterConfigure.json',
 		dataType: 'json',
 		method: 'POST',
 		cache: false,
-		headers: {'duration': duration, 'required-moiture-level': required_moiture_level},
+		headers: {
+			'min-moiture-level': min_moiture_level,
+			'required-moiture-level': required_moiture_level,
+			'duration': duration,
+		},
 		data: {'timestamp': Date.now()}
 	});
 }
@@ -325,7 +327,8 @@ function getConnectInfo()
 		
 		$("#gateway_label").html("Gateway: ");
 		$("#wifi_connect_gw").text(data["gw"]);
-		
+
+		document.getElementById('connect_info').style.display = 'block';
 		document.getElementById('disconnect_wifi').style.display = 'block';
 	});
 }
@@ -396,11 +399,11 @@ function setWaterButtonStatus(status)
 {
 	if (status && status === "ON")
 	{
-		$("#manual_water_btn").val("Turn off water");
+		$("#manual_water_btn").html("ปิดวาล์ว");
 	}
 	else if (status && status === "OFF")
 	{
-		$("#manual_water_btn").val("Turn on water");
+		$("#manual_water_btn").html("เปิดวาล์ว");
 	}
 }
 

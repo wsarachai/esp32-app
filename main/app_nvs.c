@@ -17,7 +17,8 @@
 #include "wifi_app.h"
 
 #define ANALOG_VOLTAGE_MAX 		"avol_max"
-#define WATER_THRESHOLD_VAL		"threshold_v"
+#define MIN_MOITURE_LEVEL		"min_moi_v"
+#define REQUIRED_MOITURE_LEVEL	"req_moi_v"
 #define WATER_DURATION_VAL		"wduration"
 
 // Tag for logging to the monitor
@@ -189,8 +190,16 @@ esp_err_t app_nvs_save_water_configs(void)
 			return esp_err;
 		}
 
+		// Set min_moiture_level
+		esp_err = nvs_set_i16(handle, MIN_MOITURE_LEVEL, water_config->min_moiture_level);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_save_water_configs: Error (%s) setting threshold to NVS!\n", esp_err_to_name(esp_err));
+			return esp_err;
+		}
+
 		// Set required_moiture_level
-		esp_err = nvs_set_i16(handle, WATER_THRESHOLD_VAL, water_config->required_moiture_level);
+		esp_err = nvs_set_i16(handle, REQUIRED_MOITURE_LEVEL, water_config->required_moiture_level);
 		if (esp_err != ESP_OK)
 		{
 			printf("app_nvs_save_water_configs: Error (%s) setting threshold to NVS!\n", esp_err_to_name(esp_err));
@@ -247,7 +256,16 @@ bool app_nvs_load_water_configs(void)
 		water_config->analog_voltage_max = water_config_tmp;
 
 		// Load threshold
-		esp_err = nvs_get_i16(handle, WATER_THRESHOLD_VAL, &water_config_tmp);
+		esp_err = nvs_get_i16(handle, MIN_MOITURE_LEVEL, &water_config_tmp);
+		if (esp_err != ESP_OK)
+		{
+			printf("app_nvs_load_sta_water_configs: (%s) retrieving threshold!\n", esp_err_to_name(esp_err));
+			return false;
+		}
+		water_config->min_moiture_level = water_config_tmp;
+
+		// Load threshold
+		esp_err = nvs_get_i16(handle, REQUIRED_MOITURE_LEVEL, &water_config_tmp);
 		if (esp_err != ESP_OK)
 		{
 			printf("app_nvs_load_sta_water_configs: (%s) retrieving threshold!\n", esp_err_to_name(esp_err));

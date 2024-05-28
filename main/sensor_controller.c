@@ -157,30 +157,29 @@ static void sensor_ctrl_monitor(void *parameter)
 }
 
 void automatic_watering_decision(void) {
-	water_config_t *water_config = NULL;
-	float ival = 0.0;
 	EventBits_t eventBits;
 
-//	ESP_LOGI(TAG, "ival: %.2f%%", ival);
+	water_config_t *water_config = water_ctl_get_config();
+	float ival = water_ctl_get_soil_moisture();
+
+	ESP_LOGI(TAG, "ival: %.2f min_moi_level: %d req_moi_level: %d",
+			ival, water_config->min_moiture_level, water_config->required_moiture_level);
 
 	eventBits = xEventGroupGetBits(water_event_group);
+
 	if (eventBits & WATER_ON_PROGRESS_BIT)
 	{
 		ESP_LOGI(TAG, "Watering...");
 	}
-	else
-	{
-		water_config = water_ctl_get_config();
-		ival = water_ctl_get_soil_moisture();
 
-		if (ival < water_config->required_moiture_level)
-		{
-			sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
-		}
-		else
-		{
-			sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
-		}
+	if (ival <= water_config->min_moiture_level)
+	{
+		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
+	}
+
+	if (ival >= water_config->required_moiture_level)
+	{
+		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
 	}
 }
 

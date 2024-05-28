@@ -372,11 +372,12 @@ static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req
 		status = s_off;
 	}
 
-	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f%%\", \"water_status\": \"%s\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\"}",
+	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f\", \"water_status\": \"%s\", \"min_moiture_level\": \"%d\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\"}",
 			DHT22_get_temperature(),
 			DHT22_get_humidity(),
 			water_ctl_get_soil_moisture(),
 			status,
+			water_config->min_moiture_level,
 			water_config->required_moiture_level,
 			water_config->duration);
 
@@ -446,9 +447,22 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_duration = 0, len_required_moisture_level;
-	char *duration_str = NULL, *required_moisture_level_str = NULL;
-	float duration = 0.0, required_moisture_level = 0.0;
+	size_t len_duration = 0, len_min_moiture_level, len_required_moisture_level;
+	char *duration_str = NULL, *min_moiture_level_str = NULL, *required_moisture_level_str = NULL;
+	float duration = 0.0, min_moiture_level = 0.0, required_moisture_level = 0.0;
+
+	// Get max voltage header
+	len_min_moiture_level = httpd_req_get_hdr_value_len(req, "min-moiture-level") + 1;
+	if (len_min_moiture_level > 1)
+	{
+		min_moiture_level_str = malloc(len_min_moiture_level);
+		if (httpd_req_get_hdr_value_str(req, "min-moiture-level", min_moiture_level_str, len_min_moiture_level) == ESP_OK)
+		{
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => min-moiture-level: %s", min_moiture_level_str);
+		}
+		min_moiture_level = atoi(min_moiture_level_str);
+		water_config->min_moiture_level = min_moiture_level;
+	}
 
 	// Get max voltage header
 	len_required_moisture_level = httpd_req_get_hdr_value_len(req, "required-moiture-level") + 1;
