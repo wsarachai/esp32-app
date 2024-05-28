@@ -44,7 +44,7 @@ void water_ctl_configure(void)
 
 	    app_nvs_save_water_configs();
 
-		ESP_LOGI(TAG, "Unable to water configuration, use default value instead");
+		ESP_LOGI(TAG, "Unable to load water configuration, use default value instead");
 	}
 
     /* Set the GPIO as a push/pull output */
