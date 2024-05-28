@@ -4,6 +4,7 @@
 var seconds = null;
 var otaTimerVar = null;
 var wifiConnectInterval = null;
+var gWifiStatus = null;
 
 function isEmpty(val) {
   return val === undefined || val == null || val.length <= 0 ? true : false;
@@ -198,11 +199,13 @@ function getWifiConnectStatus() {
     .then((response) => response.json())
     .then((data) => {
       if (data.wifi_connect_status == 2) {
+        gWifiStatus = 2;
         $("#wifi_connect_status").html(
           "การเชื่อมต่อล้มเหลว. โปรดตรวจสอบชื่อ AP และรหัสผ่านให้ถูกต้อง"
         );
         stopWifiConnectStatusInterval();
       } else if (data.wifi_connect_status == 3) {
+        gWifiStatus = 3;
         $("#wifi_connect_status").html("Connection Success!");
         $("#wifi_connect_status").removeClass("rd");
         $("#wifi_connect_status").addClass("gr");
@@ -335,9 +338,11 @@ function getConnectInfo() {
       $("#gateway_label").html("Gateway: ");
       $("#wifi_connect_gw").text(data["gw"]);
 
-      if ($("#connect_info").is(":hidden")) {
-        $("#wifi_connect_status").fadeOut("slow");
-        $("#connect_info").fadeIn("slow");
+      if (gWifiStatus == 3) {
+        if ($("#connect_info").is(":hidden")) {
+          $("#wifi_connect_status").fadeOut("slow");
+          $("#connect_info").fadeIn("slow");
+        }
       }
     });
 }
