@@ -196,12 +196,17 @@ static void sensor_ctrl_task(void *pvParameter)
 	// Create water event group
 	water_event_group = xEventGroupCreate();
 
+	water_config_t *water_config = water_ctl_get_config();
+
 	for (;;)
 	{
 		DHT22_sync_obtain_value();
 		water_humidity_sync_obtain_value();
 
-		automatic_watering_decision();
+		if (!water_config->manual_on_off)
+		{
+			automatic_watering_decision();
+		}
 
 		// Wait at least 2 seconds before reading again
 		// The interval of the whole process must be more than 2 seconds

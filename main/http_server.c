@@ -448,7 +448,7 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_duration = 0, len_min_moiture_level, len_required_moisture_level;
+	size_t len_duration = 0, len_min_moiture_level = 0, len_required_moisture_level = 0;
 	char *duration_str = NULL, *min_moiture_level_str = NULL, *required_moisture_level_str = NULL;
 	float duration = 0.0, min_moiture_level = 0.0, required_moisture_level = 0.0;
 
@@ -520,6 +520,38 @@ static esp_err_t toggle_water_on_off_json_handler(httpd_req_t *req)
 
 	httpd_resp_set_type(req, "application/json");
 	httpd_resp_send(req, espWaterStatusJSON, strlen(espWaterStatusJSON));
+
+	return ESP_OK;
+}
+
+
+/**
+ * manualOnOff.json handler is invoked after the turn water on/off button is pressed
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t manual_water_on_off_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/manualOnOff.json.json requested");
+
+	water_config_t* water_config = water_ctl_get_config();
+
+	size_t len_manual_on_off = 0;
+	char *manual_on_off_str = NULL;
+	bool manual_on_off = false;
+
+	// Get manual status header
+	len_manual_on_off = httpd_req_get_hdr_value_len(req, "manual-on-off") + 1;
+	if (len_manual_on_off > 1)
+	{
+		manual_on_off_str = malloc(len_manual_on_off);
+		if (httpd_req_get_hdr_value_str(req, "manual-on-off", manual_on_off_str, len_manual_on_off) == ESP_OK)
+		{
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => manual-on-off: %s", manual_on_off_str);
+		}
+		manual_on_off = atoi(manual_on_off_str);
+		water_config->manual_on_off = manual_on_off;
+	}
 
 	return ESP_OK;
 }
@@ -846,6 +878,14 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &trigger_water_on_off_json);
+
+		httpd_uri_t manual_water_on_off_json = {
+				.uri = "/manualOnOff.json",
+				.method = HTTP_POST,
+				.handler = manual_water_on_off_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &manual_water_on_off_json);
 
 		return http_server_handle;
 	}

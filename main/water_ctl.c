@@ -40,6 +40,7 @@ void water_ctl_configure(void)
 	    water_config.min_moiture_level = MIN_MOI_LEVEL_DEFAULT;
 	    water_config.required_moiture_level = REQUIRED_MOI_LEVEL_DEFAULT;
 	    water_config.duration = WATER_DURATION_DEFAULT;
+	    water_config.manual_on_off = MANUAL_ON_OFF_DEFAULT;
 
 	    app_nvs_save_water_configs();
 

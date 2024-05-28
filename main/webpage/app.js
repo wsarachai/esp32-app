@@ -14,6 +14,7 @@ function isEmpty(val) {
  */
 $(document).ready(function () {
   $("#connect_info").hide();
+  $("#manual_water_btn").hide();
   getSSID();
   getUpdateStatus();
   startESPServerStatusInterval();
@@ -30,6 +31,15 @@ $(document).ready(function () {
   });
   $("#manual_water_btn").on("click", function () {
     toggle_water_on_off();
+  });
+  $("#manual-chk").on("click", function () {
+    if ($("#manual-chk").is(":checked")) {
+      $("#manual_water_btn").fadeIn("fast");
+      saveManualOnOff("1");
+    } else {
+      $("#manual_water_btn").fadeOut("fast");
+      saveManualOnOff("0");
+    }
   });
 });
 
@@ -247,6 +257,19 @@ function saveWaterConfigure() {
       "min-moiture-level": min_moiture_level,
       "required-moiture-level": required_moiture_level,
       duration: duration,
+    },
+    data: { timestamp: Date.now() },
+  });
+}
+
+function saveManualOnOff(status) {
+  $.ajax({
+    url: "/manualOnOff.json",
+    dataType: "json",
+    method: "POST",
+    cache: false,
+    headers: {
+      "manual-on-off": status,
     },
     data: { timestamp: Date.now() },
   });

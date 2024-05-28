@@ -13,6 +13,7 @@
 #define MIN_MOI_LEVEL_DEFAULT			10		// 10%
 #define REQUIRED_MOI_LEVEL_DEFAULT		35   	// 35%
 #define WATER_DURATION_DEFAULT			20   	// one minute
+#define MANUAL_ON_OFF_DEFAULT			false
 
 /**
  * Structure for the water parameters
@@ -23,6 +24,7 @@ typedef struct water_config
 	int16_t min_moiture_level;
 	int16_t required_moiture_level;
 	int16_t duration; // minute
+	bool manual_on_off;
 
 } water_config_t;
 
