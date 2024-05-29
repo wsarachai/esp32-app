@@ -93,7 +93,14 @@ ProgressBar.prototype.setParent = function (parent) {
 };
 
 ProgressBar.prototype.setProgress = function (width) {
-  this.bar.style.width = width + "%";
+  $(this.bar).css("width", width + "%");
+  if (width <= 10) {
+    $(this.bar).css("background", "red");
+  } else if (width <= 30) {
+    $(this.bar).css("background", "orange");
+  } else {
+    $(this.bar).css("background", "green");
+  }
 };
 
 const Section = function (sectionId, title) {
