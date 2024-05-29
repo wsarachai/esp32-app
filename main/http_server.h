@@ -69,5 +69,7 @@ void http_server_stop(void);
  */
 void http_server_fw_update_reset_callback(void *arg);
 
+int get_wifi_connect_status(void);
+
 
 #endif /* MAIN_HTTP_SERVER_H_ */

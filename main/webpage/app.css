@@ -82,6 +82,10 @@ h4 {
     border-radius: 5px;
     margin: 0 5px;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 150px; /* Adjust height as needed */
 }
 
 .sensor-box label {
@@ -119,6 +123,33 @@ h4 {
     position: absolute;
     top: 10px;
     left: 10px;
+}
+
+.humidity, .soil-moisture, .temperature {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+#humidity-bar, #soil-moisture-bar {
+    margin-top: 10px; 
+    width: 80%;
+    height: 20px;
+    background: lightgrey;
+    border-radius: 10px;
+    margin: 10px auto 0; 
+    transition: background 0.3s ease;
+}
+
+#humidity-bar-fill, #soil-moisture-bar-fill {
+    height: 100%;
+    background: #1e90ff;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    margin: 0;
+}
+
+#latest-firmware-label, #latest-firmware-date {
+    display: inline-block;
 }
 
 div {
@@ -173,11 +204,13 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
 }
 
 /* Specific styling for inline elements */
-#ap_ssid, #latest_firmware,#latest_firmware_label, #temperature_reading, #humidity_reading, #soil_moisture_reading, #connected_ap, #wifi_connect_ip, #wifi_connect_netmask, #wifi_connect_gw {
+.lbl {
     display: inline-block;
+    font-weight: bold;
+    margin: 10px 0 5px;
 }
 
-#disconnect_wifi {
+#disconnect-button {
 	background-color: #ff4500;
 }
 

@@ -268,14 +268,17 @@ static void wifi_app_task(void *pvParameters)
 				case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER");
 
-					// Attempt a connection
-					wifi_app_connect_sta();
+					if (get_wifi_connect_status() != HTTP_WIFI_STATUS_CONNECT_SUCCESS)
+					{
+						// Attempt a connection
+						wifi_app_connect_sta();
 
-					// Set current number of retries to zero
-					g_retry_number = 0;
+						// Set current number of retries to zero
+						g_retry_number = 0;
 
-					// Let the HTTP server know about the connection attempt
-					http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_INIT);
+						// Let the HTTP server know about the connection attempt
+						http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_INIT);
+					}
 
 					break;
 

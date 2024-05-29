@@ -448,8 +448,8 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_duration = 0, len_min_moiture_level = 0, len_required_moisture_level = 0;
-	char *duration_str = NULL, *min_moiture_level_str = NULL, *required_moisture_level_str = NULL;
+	size_t len_duration = 0, len_min_moiture_level = 0, len_max_moiture_level = 0;
+	char *duration_str = NULL, *min_moiture_level_str = NULL, *max_moiture_level_str = NULL;
 	float duration = 0.0, min_moiture_level = 0.0, required_moisture_level = 0.0;
 
 	// Get max voltage header
@@ -466,15 +466,15 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 	}
 
 	// Get max voltage header
-	len_required_moisture_level = httpd_req_get_hdr_value_len(req, "required-moiture-level") + 1;
-	if (len_required_moisture_level > 1)
+	len_max_moiture_level = httpd_req_get_hdr_value_len(req, "max-moiture-level") + 1;
+	if (len_max_moiture_level > 1)
 	{
-		required_moisture_level_str = malloc(len_required_moisture_level);
-		if (httpd_req_get_hdr_value_str(req, "required-moiture-level", required_moisture_level_str, len_required_moisture_level) == ESP_OK)
+		max_moiture_level_str = malloc(len_max_moiture_level);
+		if (httpd_req_get_hdr_value_str(req, "required-moiture-level", max_moiture_level_str, len_max_moiture_level) == ESP_OK)
 		{
-			ESP_LOGI(TAG, "water_configure_json_handler: Found header => required-moiture-level: %s", required_moisture_level_str);
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => required-moiture-level: %s", max_moiture_level_str);
 		}
-		required_moisture_level = atoi(required_moisture_level_str);
+		required_moisture_level = atoi(max_moiture_level_str);
 		water_config->required_moiture_level = required_moisture_level;
 	}
 
@@ -928,5 +928,10 @@ void http_server_fw_update_reset_callback(void *arg)
 {
 	ESP_LOGI(TAG, "http_server_fw_update_reset_callback: Timer timed-out, restarting the device");
 	esp_restart();
+}
+
+int get_wifi_connect_status(void)
+{
+	return g_wifi_connect_status;
 }
 
