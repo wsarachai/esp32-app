@@ -214,6 +214,7 @@ GeneralInfo.prototype.setTemperatureReading = function (temperature) {
 
 GeneralInfo.prototype.setHumidityReading = function (humidity) {
   this.humidityReading.innerHTML = parseFloat(humidity).toFixed(2) + " %";
+  this.humidityBar.setProgress(humidity);
 };
 
 GeneralInfo.prototype.setSoilMoistureReading = function (soilMoisture) {
