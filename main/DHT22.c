@@ -1,19 +1,19 @@
 /*------------------------------------------------------------------------------
 
-	DHT22 temperature & humidity sensor AM2302 (DHT22) driver for ESP32
+    DHT22 temperature & humidity sensor AM2302 (DHT22) driver for ESP32
 
-	Jun 2017:	Ricardo Timmermann, new for DHT22  	
+    Jun 2017:    Ricardo Timmermann, new for DHT22
 
-	Code Based on Adafruit Industries and Sam Johnston and Coffe & Beer. Please help
-	to improve this code. 
-	
-	This example code is in the Public Domain (or CC0 licensed, at your option.)
+    Code Based on Adafruit Industries and Sam Johnston and Coffe & Beer. Please help
+    to improve this code.
 
-	Unless required by applicable law or agreed to in writing, this
-	software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-	CONDITIONS OF ANY KIND, either express or implied.
+    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
-	PLEASE KEEP THIS CODE IN LESS THAN 0XFF LINES. EACH LINE MAY CONTAIN ONE BUG !!!
+    Unless required by applicable law or agreed to in writing, this
+    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+    CONDITIONS OF ANY KIND, either express or implied.
+
+    PLEASE KEEP THIS CODE IN LESS THAN 0XFF LINES. EACH LINE MAY CONTAIN ONE BUG !!!
 
 ---------------------------------------------------------------------------------*/
 
@@ -29,89 +29,84 @@
 #include "DHT22.h"
 #include "tasks_common.h"
 
-#define DHT_OK 				0
-#define DHT_CHECKSUM_ERROR 	-1
-#define DHT_TIMEOUT_ERROR 	-2
+#define DHT_OK                 0
+#define DHT_CHECKSUM_ERROR     -1
+#define DHT_TIMEOUT_ERROR      -2
 
-#define DHT_GPIO			25
+#define DHT_GPIO               25
 
 // == global defines =============================================
 
 static const char* TAG = "DHT";
 
-int DHTgpio = 4;				// my default DHT pin = 4
+int DHTgpio = 4;                // my default DHT pin = 4
 float humidity = 0.;
 float temperature = 0.;
 
 esp_err_t DHT22_init(void)
 {
-	// DHT GPIO pin init
-	DHT22_set_gpio(DHT_GPIO);
-//	printf("Starting DHT task\n\n");
+    // DHT GPIO pin init
+    DHT22_set_gpio(DHT_GPIO);
 
-	return ESP_OK;
+    return ESP_OK;
 }
 
 // == set the DHT used pin=========================================
-
 void DHT22_set_gpio( int gpio )
 {
-	DHTgpio = gpio;
+    DHTgpio = gpio;
 }
 
 // == get temp & hum =============================================
-
 float DHT22_get_humidity() { return humidity; }
 float DHT22_get_temperature() { return temperature; }
 
 // == error handler ===============================================
 static void errorHandler(int response)
 {
-	switch(response) {
-	
-		case DHT_TIMEOUT_ERROR :
-			ESP_LOGE( TAG, "Sensor Timeout\n" );
-			break;
+    switch(response) {
+        case DHT_TIMEOUT_ERROR :
+            ESP_LOGE( TAG, "Sensor Timeout\n" );
+            break;
 
-		case DHT_CHECKSUM_ERROR:
-			ESP_LOGE( TAG, "CheckSum error\n" );
-			break;
+        case DHT_CHECKSUM_ERROR:
+            ESP_LOGE( TAG, "CheckSum error\n" );
+            break;
 
-		case DHT_OK:
-			break;
+        case DHT_OK:
+            break;
 
-		default :
-			ESP_LOGE( TAG, "Unknown error\n" );
-	}
+        default :
+            ESP_LOGE( TAG, "Unknown error\n" );
+    }
 }
 
 /*-------------------------------------------------------------------------------
 ;
-;	get next state 
+;    get next state
 ;
-;	I don't like this logic. It needs some interrupt blocking / priority
-;	to ensure it runs in realtime.
+;    I don't like this logic. It needs some interrupt blocking / priority
+;    to ensure it runs in realtime.
 ;
 ;--------------------------------------------------------------------------------*/
 static int get_signal_level( int usTimeOut, bool state )
 {
+    int uSec = 0;
+    while( gpio_get_level(DHTgpio)==state ) {
+        if( uSec > usTimeOut )
+        {
+            return -1;
+        }
+        ++uSec;
+        esp_rom_delay_us(1);        // uSec delay
+    }
 
-	int uSec = 0;
-	while( gpio_get_level(DHTgpio)==state ) {
-
-		if( uSec > usTimeOut ) 
-			return -1;
-		
-		++uSec;
-		esp_rom_delay_us(1);		// uSec delay
-	}
-	
-	return uSec;
+    return uSec;
 }
 
 /*----------------------------------------------------------------------------
 ;
-;	read DHT22 sensor
+;    read DHT22 sensor
 
 copy/paste from AM2302/DHT22 Docu:
 
@@ -144,115 +139,106 @@ To request data from DHT:
    then the DHT pulls up 80us for preparation to send data.
 4) When DHT is sending data to MCU, every bit's transmission begin with low-voltage-level that last 50us, 
    the following high-voltage-level signal's length decide the bit is "1" or "0".
-	0: 26~28 us
-	1: 70 us
+    0: 26~28 us
+    1: 70 us
 
 ;----------------------------------------------------------------------------*/
 
-#define MAXdhtData 5	// to complete 40 = 5*8 Bits
+#define MAXdhtData 5    // to complete 40 = 5*8 Bits
 
 static int readDHT()
 {
-	int uSec = 0;
+    int uSec = 0;
 
-	uint8_t dhtData[MAXdhtData];
-	uint8_t byteInx = 0;
-	uint8_t bitInx = 7;
+    uint8_t dhtData[MAXdhtData];
+    uint8_t byteInx = 0;
+    uint8_t bitInx = 7;
 
-	for (int k = 0; k<MAXdhtData; k++)
-	{
-		dhtData[k] = 0;
-	}
+    for (int k = 0; k<MAXdhtData; k++)
+    {
+        dhtData[k] = 0;
+    }
 
-	// == Send start signal to DHT sensor ===========
+    // == Send start signal to DHT sensor ===========
 
-	gpio_set_direction( DHTgpio, GPIO_MODE_OUTPUT );
+    gpio_set_direction( DHTgpio, GPIO_MODE_OUTPUT );
 
-	// pull down for 3 ms for a smooth and nice wake up 
-	gpio_set_level( DHTgpio, 0 );
-	esp_rom_delay_us( 3000 );
+    // pull down for 3 ms for a smooth and nice wake up
+    gpio_set_level( DHTgpio, 0 );
+    esp_rom_delay_us( 3000 );
 
-	// pull up for 25 us for a gentile asking for data
-	gpio_set_level( DHTgpio, 1 );
-	esp_rom_delay_us( 25 );
+    // pull up for 25 us for a gentile asking for data
+    gpio_set_level( DHTgpio, 1 );
+    esp_rom_delay_us( 25 );
 
-	gpio_set_direction( DHTgpio, GPIO_MODE_INPUT );		// change to input mode
+    gpio_set_direction( DHTgpio, GPIO_MODE_INPUT );        // change to input mode
   
-	// == DHT will keep the line low for 80 us and then high for 80us ====
+    // == DHT will keep the line low for 80 us and then high for 80us ====
 
-	uSec = get_signal_level( 85, 0 );
-//	ESP_LOGI( TAG, "Response = %d", uSec );
-	if( uSec<0 ) return DHT_TIMEOUT_ERROR; 
+    uSec = get_signal_level( 85, 0 );
+//    ESP_LOGI( TAG, "Response = %d", uSec );
+    if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
-	// -- 80us up ------------------------
+    // -- 80us up ------------------------
 
-	uSec = get_signal_level( 85, 1 );
-//	ESP_LOGI( TAG, "Response = %d", uSec );
-	if( uSec<0 ) return DHT_TIMEOUT_ERROR;
+    uSec = get_signal_level( 85, 1 );
+//    ESP_LOGI( TAG, "Response = %d", uSec );
+    if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
-	// == No errors, read the 40 data bits ================
+    // == No errors, read the 40 data bits ================
   
-	for( int k = 0; k < 40; k++ ) {
+    for( int k = 0; k < 40; k++ ) {
+        // -- starts new data transmission with >50us low signal
+        uSec = get_signal_level( 56, 0 );
+        if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
-		// -- starts new data transmission with >50us low signal
+        // -- check to see if after >70us rx data is a 0 or a 1
+        uSec = get_signal_level( 75, 1 );
+        if( uSec<0 ) return DHT_TIMEOUT_ERROR;
 
-		uSec = get_signal_level( 56, 0 );
-		if( uSec<0 ) return DHT_TIMEOUT_ERROR;
+        // add the current read to the output data
+        // since all dhtData array where set to 0 at the start,
+        // only look for "1" (>28us us)
+        if (uSec > 40) {
+            dhtData[ byteInx ] |= (1 << bitInx);
+        }
 
-		// -- check to see if after >70us rx data is a 0 or a 1
+        // index to next byte
+        if (bitInx == 0) { bitInx = 7; ++byteInx; }
+        else bitInx--;
+    }
 
-		uSec = get_signal_level( 75, 1 );
-		if( uSec<0 ) return DHT_TIMEOUT_ERROR;
+    // == get humidity from Data[0] and Data[1] ==========================
+    humidity = dhtData[0];
+    humidity *= 0x100;                    // >> 8
+    humidity += dhtData[1];
+    humidity /= 10;                        // get the decimal
 
-		// add the current read to the output data
-		// since all dhtData array where set to 0 at the start, 
-		// only look for "1" (>28us us)
-	
-		if (uSec > 40) {
-			dhtData[ byteInx ] |= (1 << bitInx);
-			}
-	
-		// index to next byte
+    // == get temp from Data[2] and Data[3]
+    temperature = dhtData[2] & 0x7F;
+    temperature *= 0x100;                // >> 8
+    temperature += dhtData[3];
+    temperature /= 10;
 
-		if (bitInx == 0) { bitInx = 7; ++byteInx; }
-		else bitInx--;
-	}
+    if( dhtData[2] & 0x80 )             // negative temp, brrr it's freezing
+    {
+        temperature *= -1;
+    }
 
-	// == get humidity from Data[0] and Data[1] ==========================
-
-	humidity = dhtData[0];
-	humidity *= 0x100;					// >> 8
-	humidity += dhtData[1];
-	humidity /= 10;						// get the decimal
-
-	// == get temp from Data[2] and Data[3]
-	
-	temperature = dhtData[2] & 0x7F;	
-	temperature *= 0x100;				// >> 8
-	temperature += dhtData[3];
-	temperature /= 10;
-
-	if( dhtData[2] & 0x80 ) 			// negative temp, brrr it's freezing
-		temperature *= -1;
-
-
-	// == verify if checksum is ok ===========================================
-	// Checksum is the sum of Data 8 bits masked out 0xFF
-	
-	if (dhtData[4] == ((dhtData[0] + dhtData[1] + dhtData[2] + dhtData[3]) & 0xFF)) 
-		return DHT_OK;
-
-	else 
-		return DHT_CHECKSUM_ERROR;
+    // == verify if checksum is ok ===========================================
+    // Checksum is the sum of Data 8 bits masked out 0xFF
+    if (dhtData[4] == ((dhtData[0] + dhtData[1] + dhtData[2] + dhtData[3]) & 0xFF))
+    {
+        return DHT_OK;
+    }
+    else
+    {
+        return DHT_CHECKSUM_ERROR;
+    }
 }
 
 void DHT22_sync_obtain_value(void)
 {
-	//		printf("=== Reading DHT ===\n");
-			int ret = readDHT();
-
-			errorHandler(ret);
-
-	//		printf("Hum %.1f\n", getHumidity());
-	//		printf("Tmp %.1f\n", getTemperature());
+    int ret = readDHT();
+    errorHandler(ret);
 }

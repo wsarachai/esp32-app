@@ -50,6 +50,7 @@ label {
 div {
     margin: 5px 0;
 }
+
 h3 {
 	font-size: 1.2em;
     color: #1d3557;
@@ -60,14 +61,78 @@ h4 {
     color: #1d3557;
 }
 
+div {
+    margin: 5px 0;
+}
+
+button, input[type="button"] {
+    background-color: #1d3557;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    font-size: 1em;
+    cursor: pointer;
+    margin: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease;
+}
+
+button:hover, input[type="button"]:hover {
+    background-color: #457b9d;
+}
+
+button:active, input[type="button"]:active {
+    background-color: #1d3557;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Input field styling */
+input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
+    width: calc(100% - 22px);
+    margin: 5px 0;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+#humidity-bar, #soil-moisture-bar {
+    margin-top: 10px; 
+    width: 80%;
+    height: 20px;
+    background: lightgrey;
+    border-radius: 10px;
+    margin: 10px auto 0; 
+    transition: background 0.3s ease;
+}
+
+#humidity-bar-fill, #soil-moisture-bar-fill {
+    height: 100%;
+    background: #1e90ff;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    margin: 0;
+}
+
+#latest-firmware-label, #latest-firmware-date {
+    display: inline-block;
+}
+
+#disconnect-button {
+	background-color: #ff4500;
+}
+
 .gr {
 	color: green;
 }
+
 .rd {
 	color: #ff4500;
 }
 
-/* Sensor container styling */
 .sensor-container {
     display: flex;
     justify-content: space-between;
@@ -130,72 +195,8 @@ h4 {
     margin-bottom: 20px;
 }
 
-#humidity-bar, #soil-moisture-bar {
-    margin-top: 10px; 
-    width: 80%;
-    height: 20px;
-    background: lightgrey;
-    border-radius: 10px;
-    margin: 10px auto 0; 
-    transition: background 0.3s ease;
-}
-
-#humidity-bar-fill, #soil-moisture-bar-fill {
-    height: 100%;
-    background: #1e90ff;
-    border-radius: 10px;
-    transition: width 0.3s ease;
-    margin: 0;
-}
-
-#latest-firmware-label, #latest-firmware-date {
-    display: inline-block;
-}
-
-div {
-    margin: 5px 0;
-}
-/* Button styling */
-button, input[type="button"] {
-    background-color: #1d3557;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 15px;
-    font-size: 1em;
-    cursor: pointer;
-    margin: 5px 0;
-    width: 100%;
-    box-sizing: border-box;
-    transition: background-color 0.3s ease;
-}
-
-button:hover, input[type="button"]:hover {
-    background-color: #457b9d;
-}
-
-button:active, input[type="button"]:active {
-    background-color: #1d3557;
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-}
-
-/* Input field styling */
-input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
-    width: calc(100% - 22px);
-    margin: 5px 0;
-    padding: 10px;
-    font-size: 14px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-}
-
 .data {
     color:#32cd32;
-}
-
-.hidden {
-	display: none;
 }
 
 .flex-container {
@@ -203,19 +204,14 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
     justify-content: space-between;
 }
 
-/* Specific styling for inline elements */
 .lbl {
     display: inline-block;
     font-weight: bold;
     margin: 10px 0 5px;
 }
 
-#disconnect-button {
-	background-color: #ff4500;
-}
-
 .time-data {
-    color:#ff4500;
+    color: #1d3557;
     font-weight: bold;
     font-size: 1.0em;
     margin-right: 10px;

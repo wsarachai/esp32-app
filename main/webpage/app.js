@@ -33,49 +33,19 @@ function createElement(element, attribute, inner) {
   return el;
 }
 
-function saveManualOnOff(status) {
-  $.ajax({
-    url: "/manualOnOff.json",
-    dataType: "json",
-    method: "POST",
-    cache: false,
-    headers: {
-      "manual-on-off": status,
-    },
-    data: { timestamp: Date.now() },
-  });
-}
-
-function toggleWaterOnOff() {
-  var requestURL = "/toggleWaterOnOff.json";
-
-  fetch(requestURL, {
-    method: "GET",
-    cache: "no-cache",
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      setWaterButtonStatus(data["water_status"]);
-    });
-}
-
-function disconnectWifi() {
-  var requestURL = "/wifiDisconnect.json";
-
-  fetch(requestURL, {
-    method: "DELETE",
-    cache: "no-cache",
-    body: JSON.stringify({
-      timestamp: Date.now(),
-    }),
-  }).then((data) => {
-    console.log("disconnectWifi...");
-    $("#connect_info").fadeOut("slow");
-  });
-
-  // Update the web page
-  setTimeout("location.reload(true);", 2000);
-}
+HTMLElement.prototype._appendChildren = HTMLElement.prototype.appendChild;
+HTMLElement.prototype.appendChild = function (child) {
+  if (child instanceof ProgressBar) {
+    return HTMLElement.prototype._appendChildren.call(this, child.barContainer);
+  } else if (child instanceof Section) {
+    return HTMLElement.prototype._appendChildren.call(
+      this,
+      child.sectionContainer
+    );
+  } else {
+    return HTMLElement.prototype._appendChildren.call(this, child);
+  }
+};
 
 ////////////////////////////////////////
 // Class Definition
@@ -88,21 +58,44 @@ const ProgressBar = function (id) {
   this.barContainer.appendChild(this.bar);
 };
 
-ProgressBar.prototype.setParent = function (parent) {
-  parent.appendChild(this.barContainer);
-};
-
-ProgressBar.prototype.setProgress = function (width) {
-  $(this.bar).css("width", width + "%");
-  if (width <= 10) {
+ProgressBar.prototype.changeBackgroundByValue = function (width) {
+  if (width <= 30) {
     $(this.bar).css("background", "red");
-  } else if (width <= 30) {
+  } else if (width <= 50) {
     $(this.bar).css("background", "orange");
   } else {
     $(this.bar).css("background", "green");
   }
 };
 
+ProgressBar.prototype.setProgress = function (width) {
+  $(this.bar).css("width", width + "%");
+  this.changeBackgroundByValue(width);
+};
+
+////////////////////////////////////////
+// Soil Moisture Progress Bar
+////////////////////////////////////////
+const SoilMoistureProgressBar = function (id) {
+  ProgressBar.call(this, id);
+};
+SoilMoistureProgressBar.prototype = Object.create(ProgressBar.prototype);
+
+SoilMoistureProgressBar.prototype.changeBackgroundByValue = function (
+  width
+) {
+  if (width <= 40) {
+    $(this.bar).css("background", "red");
+  } else if (width <= 60) {
+    $(this.bar).css("background", "orange");
+  } else {
+    $(this.bar).css("background", "green");
+  }
+};
+
+////////////////////////////////////////
+// Section Div
+////////////////////////////////////////
 const Section = function (sectionId, title) {
   this.sectionContainer = createElement("section", {
     id: sectionId,
@@ -114,10 +107,6 @@ const Section = function (sectionId, title) {
 
 Section.prototype.createHeader = function () {
   this.appendChild(createElement("h2", {}, this.title));
-};
-
-Section.prototype.setParent = function (parent) {
-  parent.appendChild(this.sectionContainer);
 };
 
 Section.prototype.appendChild = function (element) {
@@ -164,9 +153,10 @@ GeneralInfo.prototype.createSensorInfo = function () {
     id: "humidity_reading",
     class: "data",
   });
-  humidityInfo.appendChild(this.humidityReading);
   this.humidityBar = new ProgressBar("humidity-bar");
-  this.humidityBar.setParent(humidityInfo);
+  
+  humidityInfo.appendChild(this.humidityReading);
+  humidityInfo.appendChild(this.humidityBar);
 
   sensorInfo.appendChild(temperatureInfo);
   sensorInfo.appendChild(humidityInfo);
@@ -180,9 +170,10 @@ GeneralInfo.prototype.createSensorInfo = function () {
     id: "soil_moisture_reading",
     class: "data",
   });
+  this.soilMoistureBar = new SoilMoistureProgressBar("soil-moisture-bar");
+  
   soilMoistureInfo.appendChild(this.soilMoistureReading);
-  this.soilMoistureBar = new ProgressBar("soil-moisture-bar");
-  this.soilMoistureBar.setParent(soilMoistureInfo);
+  soilMoistureInfo.appendChild(this.soilMoistureBar);
 
   sensorInfo.appendChild(temperatureInfo);
   sensorInfo.appendChild(humidityInfo);
@@ -385,22 +376,48 @@ ManualControl.prototype.createBodyInfo = function () {
 
   this.onOffButton = createElement("button", { id: "on-off-button" }, WATER_ON);
 
-  const manualOnOffChk_Click = function () {
-    const onOffButton = $(this.onOffButton);
-    if (this.chkStatus.checked) {
-      onOffButton.fadeIn("fast");
-      saveManualOnOff("1");
-    } else {
-      onOffButton.fadeOut("fast");
-      saveManualOnOff("0");
-    }
-  };
-
-  this.chkStatus.addEventListener("click", manualOnOffChk_Click.bind(this));
-  this.onOffButton.addEventListener("click", toggleWaterOnOff);
+  this.chkStatus.addEventListener("click", this.chkStatus_Click.bind(this));
+  this.onOffButton.addEventListener("click", this.toggleWaterOnOff.bind(this));
 
   this.appendChild(divBody);
   this.appendChild(this.onOffButton);
+};
+
+ManualControl.prototype.saveManualOnOff = function (status) {
+  $.ajax({
+    url: "/manualOnOff.json",
+    dataType: "json",
+    method: "POST",
+    cache: false,
+    headers: {
+      "manual-on-off": status,
+    },
+    data: { timestamp: Date.now() },
+  });
+};
+
+ManualControl.prototype.chkStatus_Click = function () {
+  const onOffButton = $(this.onOffButton);
+  if (this.chkStatus.checked) {
+    onOffButton.fadeIn("fast");
+    this.saveManualOnOff("1");
+  } else {
+    onOffButton.fadeOut("fast");
+    this.saveManualOnOff("0");
+  }
+};
+
+ManualControl.prototype.toggleWaterOnOff = function () {
+  var requestURL = "/toggleWaterOnOff.json";
+
+  fetch(requestURL, {
+    method: "GET",
+    cache: "no-cache",
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      this.setOnOffButtonStatus(data["water_status"]);
+    });
 };
 
 ManualControl.prototype.hideOnOffButton = function (status) {
@@ -433,7 +450,7 @@ const SSIDInfo = function () {
 SSIDInfo.prototype = Object.create(Section.prototype);
 
 SSIDInfo.prototype.createBodyInfo = function () {
-  this.apSSID = createElement("div", { id: "ap-ssid" });
+  this.apSSID = createElement("div", { id: "ap-ssid", class: "data" });
   this.appendChild(this.apSSID);
 };
 
@@ -665,9 +682,10 @@ WiFiConnectionInfo.prototype.createBodyInfo = function () {
     "ตัดการเชื่อมต่อ"
   );
 
-  this.disconnectButton.addEventListener("click", function () {
-    disconnectWifi();
-  });
+  this.disconnectButton.addEventListener(
+    "click",
+    this.disconnectWifi.bind(this)
+  );
 
   this.appendChild(this.connectedAPLabel);
   this.appendChild(this.connectedAPContent);
@@ -680,6 +698,24 @@ WiFiConnectionInfo.prototype.createBodyInfo = function () {
   this.appendChild(this.disconnectButton);
 
   this.hideDisconnectButton();
+};
+
+WiFiConnectionInfo.prototype.disconnectWifi = function () {
+  var requestURL = "/wifiDisconnect.json";
+
+  fetch(requestURL, {
+    method: "DELETE",
+    cache: "no-cache",
+    body: JSON.stringify({
+      timestamp: Date.now(),
+    }),
+  }).then((data) => {
+    console.log("disconnectWifi...");
+    $("#connect_info").fadeOut("slow");
+  });
+
+  // Update the web page
+  setTimeout("location.reload(true);", 2000);
 };
 
 WiFiConnectionInfo.prototype.hideDisconnectButton = function () {
@@ -912,24 +948,23 @@ $(document).ready(function () {
   const wifiConnection = new WiFiConnection(wifiConnectionInfo);
   const firmwareUpdate = new FirmwareUpdate();
 
-  generalInfo.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  systemConfig.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  manualControl.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  ssidInfo.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  wifiConnection.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  wifiConnectionInfo.setParent(mainContainer);
-  mainContainer.appendChild(createElement("hr"));
-  firmwareUpdate.setParent(mainContainer);
-
   manualControl.hideOnOffButton();
-
   ssidInfo.getSSID();
   firmwareUpdate.getUpdateStatus();
+
+  mainContainer.appendChild(generalInfo);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(systemConfig);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(manualControl);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(ssidInfo);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(wifiConnection);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(wifiConnectionInfo);
+  mainContainer.appendChild(createElement("hr"));
+  mainContainer.appendChild(firmwareUpdate);
 
   const getESPServerStatusBind = getESPServerStatus.bind(
     null,

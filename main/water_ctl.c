@@ -80,6 +80,8 @@ water_config_t *water_ctl_get_config(void)
 	return &water_config;
 }
 
+#define MAX_SCALE 60.0
+
 float water_ctl_get_soil_moisture(void)
 {
 	float current_voltage = water_humidity_get_voltage();
@@ -87,6 +89,13 @@ float water_ctl_get_soil_moisture(void)
 //	ESP_LOGI(TAG, "current_voltage: %.2f", current_voltage);
 
 	float ival = (water_config.analog_voltage_max - current_voltage) / water_config.analog_voltage_max * 100.0;
+
+	if (ival >= MAX_SCALE)
+	{
+		ival = MAX_SCALE;
+	}
+
+	ival = ival / MAX_SCALE * 100;
 
 	return ival;
 }
