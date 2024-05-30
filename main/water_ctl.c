@@ -37,8 +37,8 @@ void water_ctl_configure(void)
 	else
 	{
 	    water_config.analog_voltage_max = ANALOG_VOLTAGE_MAX_DEFAULT;
-	    water_config.min_moiture_level = MIN_MOI_LEVEL_DEFAULT;
-	    water_config.required_moiture_level = REQUIRED_MOI_LEVEL_DEFAULT;
+	    water_config.min_moisture_level = MIN_MOI_LEVEL_DEFAULT;
+	    water_config.max_moisture_level = MAX_MOI_LEVEL_DEFAULT;
 	    water_config.duration = WATER_DURATION_DEFAULT;
 	    water_config.manual_on_off = MANUAL_ON_OFF_DEFAULT;
 

@@ -163,7 +163,7 @@ void automatic_watering_decision(void) {
 	float ival = water_ctl_get_soil_moisture();
 
 	ESP_LOGI(TAG, "ival: %.2f min_moi_level: %d req_moi_level: %d",
-			ival, water_config->min_moiture_level, water_config->required_moiture_level);
+			ival, water_config->min_moisture_level, water_config->max_moisture_level);
 
 	eventBits = xEventGroupGetBits(water_event_group);
 
@@ -172,12 +172,12 @@ void automatic_watering_decision(void) {
 		ESP_LOGI(TAG, "Watering...");
 	}
 
-	if (ival <= water_config->min_moiture_level)
+	if (ival <= water_config->min_moisture_level)
 	{
 		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_ON);
 	}
 
-	if (ival >= water_config->required_moiture_level)
+	if (ival >= water_config->max_moisture_level)
 	{
 		sensor_ctl_monitor_send_message(SENSOR_CTL_WATER_OFF);
 	}

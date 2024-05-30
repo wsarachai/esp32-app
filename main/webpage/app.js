@@ -339,8 +339,8 @@ SystemConfig.prototype.saveWaterConfigure = function () {
     method: "POST",
     cache: false,
     headers: {
-      "min-moiture-level": min_moiture_level,
-      "max-moiture-level": max_moiture_level,
+      "min-moisture-level": min_moiture_level,
+      "max-moisture-level": max_moiture_level,
       duration: duration,
     },
     data: { timestamp: Date.now() },
@@ -919,15 +919,15 @@ function getESPServerStatus(
     generalInfo.setCurrentTime(data["time"]);
     generalInfo.setTemperatureReading(data["temp"]);
     generalInfo.setHumidityReading(data["humidity"]);
-    generalInfo.setSoilMoistureReading(data["soil_moisture"]);
+    generalInfo.setSoilMoistureReading(data["soil-moisture"]);
 
-    systemConfig.setMinMoistureLevel(data["min_moiture_level"]);
-    systemConfig.setMaxMoistureLevel(data["required_moiture_level"]);
+    systemConfig.setMinMoistureLevel(data["min-moiture-level"]);
+    systemConfig.setMaxMoistureLevel(data["max-moiture-level"]);
     systemConfig.setMaxTimeSpend(data["duration"]);
 
-    manualControl.setOnOffButtonStatus(data["water_status"]);
+    manualControl.setOnOffButtonStatus(data["water-status"]);
 
-    if (parseInt(data["wifi_connect_status"]) == 3) {
+    if (parseInt(data["wifi-connect-status"]) == 3) {
       if (isEmpty(wifiConnectionInfo.getConnectedAPName())) {
         wifiConnectionInfo.getConnectInfo();
       }

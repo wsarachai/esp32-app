@@ -18,7 +18,7 @@
 
 #define ANALOG_VOLTAGE_MAX 		"avol_max"
 #define MIN_MOITURE_LEVEL		"min_moi_v"
-#define REQUIRED_MOITURE_LEVEL	"req_moi_v"
+#define MAX_MOITURE_LEVEL	"max_moi_v"
 #define WATER_DURATION_VAL		"wduration"
 
 // Tag for logging to the monitor
@@ -191,18 +191,18 @@ esp_err_t app_nvs_save_water_configs(void)
 		}
 
 		// Set min_moiture_level
-		esp_err = nvs_set_i16(handle, MIN_MOITURE_LEVEL, water_config->min_moiture_level);
+		esp_err = nvs_set_i16(handle, MIN_MOITURE_LEVEL, water_config->min_moisture_level);
 		if (esp_err != ESP_OK)
 		{
-			printf("app_nvs_save_water_configs: Error (%s) setting threshold to NVS!\n", esp_err_to_name(esp_err));
+			printf("app_nvs_save_water_configs: Error (%s) setting min_moisture_level to NVS!\n", esp_err_to_name(esp_err));
 			return esp_err;
 		}
 
 		// Set required_moiture_level
-		esp_err = nvs_set_i16(handle, REQUIRED_MOITURE_LEVEL, water_config->required_moiture_level);
+		esp_err = nvs_set_i16(handle, MAX_MOITURE_LEVEL, water_config->max_moisture_level);
 		if (esp_err != ESP_OK)
 		{
-			printf("app_nvs_save_water_configs: Error (%s) setting threshold to NVS!\n", esp_err_to_name(esp_err));
+			printf("app_nvs_save_water_configs: Error (%s) setting max_moisture_level to NVS!\n", esp_err_to_name(esp_err));
 			return esp_err;
 		}
 
@@ -224,7 +224,11 @@ esp_err_t app_nvs_save_water_configs(void)
 
 		nvs_close(handle);
 
-		ESP_LOGI(TAG, "app_nvs_save_water_configs: wrote water_config: Analog voltage max: %d Required moiture level: %d Duration: %d", water_config->analog_voltage_max, water_config->required_moiture_level, water_config->duration);
+		ESP_LOGI(TAG, "app_nvs_save_water_configs: wrote water_config: Analog voltage max: %d Min Moisture: %d Max Moisture: %d Duration: %d",
+				water_config->analog_voltage_max,
+				water_config->min_moisture_level,
+				water_config->max_moisture_level,
+				water_config->duration);
 	}
 
 	printf("app_nvs_save_water_configs: returned ESP_OK\n");
@@ -259,19 +263,19 @@ bool app_nvs_load_water_configs(void)
 		esp_err = nvs_get_i16(handle, MIN_MOITURE_LEVEL, &water_config_tmp);
 		if (esp_err != ESP_OK)
 		{
-			printf("app_nvs_load_sta_water_configs: (%s) retrieving threshold!\n", esp_err_to_name(esp_err));
+			printf("app_nvs_load_sta_water_configs: (%s) retrieving min moisture level!\n", esp_err_to_name(esp_err));
 			return false;
 		}
-		water_config->min_moiture_level = water_config_tmp;
+		water_config->min_moisture_level = water_config_tmp;
 
 		// Load threshold
-		esp_err = nvs_get_i16(handle, REQUIRED_MOITURE_LEVEL, &water_config_tmp);
+		esp_err = nvs_get_i16(handle, MAX_MOITURE_LEVEL, &water_config_tmp);
 		if (esp_err != ESP_OK)
 		{
-			printf("app_nvs_load_sta_water_configs: (%s) retrieving threshold!\n", esp_err_to_name(esp_err));
+			printf("app_nvs_load_sta_water_configs: (%s) retrieving max moisture level!\n", esp_err_to_name(esp_err));
 			return false;
 		}
-		water_config->required_moiture_level = water_config_tmp;
+		water_config->max_moisture_level = water_config_tmp;
 
 
 		// Load duration
@@ -285,7 +289,11 @@ bool app_nvs_load_water_configs(void)
 
 		nvs_close(handle);
 
-		printf("app_nvs_load_sta_water_configs: Analog voltage max: %d Required moiture level: %d Duration: %d\n", water_config->analog_voltage_max, water_config->required_moiture_level, water_config->duration);
+		printf("app_nvs_load_sta_water_configs: Analog voltage max: %d Min Moiture Level: %d Max Moiture Level: %d Duration: %d\n",
+				water_config->analog_voltage_max,
+				water_config->min_moisture_level,
+				water_config->max_moisture_level,
+				water_config->duration);
 		return true;
 	}
 	else

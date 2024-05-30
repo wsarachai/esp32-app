@@ -372,13 +372,13 @@ static esp_err_t http_server_get_esp_server_status_json_handler(httpd_req_t *req
 		status = s_off;
 	}
 
-	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil_moisture\": \"%.2f\", \"water_status\": \"%s\", \"min_moiture_level\": \"%d\", \"required_moiture_level\": \"%d\", \"duration\": \"%d\", \"wifi_connect_status\": \"%d\"}",
+	sprintf(espStatusJSON, "{\"temp\":\"%.1f\",\"humidity\":\"%.1f\", \"soil-moisture\": \"%.2f\", \"water-status\": \"%s\", \"min-moiture-level\": \"%d\", \"max-moiture-level\": \"%d\", \"duration\": \"%d\", \"wifi-connect-status\": \"%d\"}",
 			DHT22_get_temperature(),
 			DHT22_get_humidity(),
 			water_ctl_get_soil_moisture(),
 			status,
-			water_config->min_moiture_level,
-			water_config->required_moiture_level,
+			water_config->min_moisture_level,
+			water_config->max_moisture_level,
 			water_config->duration,
 			g_wifi_connect_status);
 
@@ -448,34 +448,34 @@ static esp_err_t water_configure_json_handler(httpd_req_t *req)
 
 	water_config_t* water_config = water_ctl_get_config();
 
-	size_t len_duration = 0, len_min_moiture_level = 0, len_max_moiture_level = 0;
-	char *duration_str = NULL, *min_moiture_level_str = NULL, *max_moiture_level_str = NULL;
-	float duration = 0.0, min_moiture_level = 0.0, required_moisture_level = 0.0;
+	size_t len_duration = 0, len_min_moisture_level = 0, len_max_moisture_level = 0;
+	char *duration_str = NULL, *min_moisture_level_str = NULL, *max_moisture_level_str = NULL;
+	float duration = 0.0, min_moisture_level = 0.0, max_moisture_level = 0.0;
 
 	// Get max voltage header
-	len_min_moiture_level = httpd_req_get_hdr_value_len(req, "min-moiture-level") + 1;
-	if (len_min_moiture_level > 1)
+	len_min_moisture_level = httpd_req_get_hdr_value_len(req, "min-moisture-level") + 1;
+	if (len_min_moisture_level > 1)
 	{
-		min_moiture_level_str = malloc(len_min_moiture_level);
-		if (httpd_req_get_hdr_value_str(req, "min-moiture-level", min_moiture_level_str, len_min_moiture_level) == ESP_OK)
+		min_moisture_level_str = malloc(len_min_moisture_level);
+		if (httpd_req_get_hdr_value_str(req, "min-moisture-level", min_moisture_level_str, len_min_moisture_level) == ESP_OK)
 		{
-			ESP_LOGI(TAG, "water_configure_json_handler: Found header => min-moiture-level: %s", min_moiture_level_str);
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => min-moisture-level: %s", min_moisture_level_str);
 		}
-		min_moiture_level = atoi(min_moiture_level_str);
-		water_config->min_moiture_level = min_moiture_level;
+		min_moisture_level = atoi(min_moisture_level_str);
+		water_config->min_moisture_level = min_moisture_level;
 	}
 
 	// Get max voltage header
-	len_max_moiture_level = httpd_req_get_hdr_value_len(req, "max-moiture-level") + 1;
-	if (len_max_moiture_level > 1)
+	len_max_moisture_level = httpd_req_get_hdr_value_len(req, "max-moisture-level") + 1;
+	if (len_max_moisture_level > 1)
 	{
-		max_moiture_level_str = malloc(len_max_moiture_level);
-		if (httpd_req_get_hdr_value_str(req, "required-moiture-level", max_moiture_level_str, len_max_moiture_level) == ESP_OK)
+		max_moisture_level_str = malloc(len_max_moisture_level);
+		if (httpd_req_get_hdr_value_str(req, "max-moisture-level", max_moisture_level_str, len_max_moisture_level) == ESP_OK)
 		{
-			ESP_LOGI(TAG, "water_configure_json_handler: Found header => required-moiture-level: %s", max_moiture_level_str);
+			ESP_LOGI(TAG, "water_configure_json_handler: Found header => max-moisture-level: %s", max_moisture_level_str);
 		}
-		required_moisture_level = atoi(max_moiture_level_str);
-		water_config->required_moiture_level = required_moisture_level;
+		max_moisture_level = atoi(max_moisture_level_str);
+		water_config->max_moisture_level = max_moisture_level;
 	}
 
 	// Get duration header
