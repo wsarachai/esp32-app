@@ -39,6 +39,7 @@ h2 {
     color: #1d3557;
     font-size: 1.5em;
     margin-top: 0;
+    margin-bottom: 3px;
 }
 
 label {
@@ -123,6 +124,11 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
 
 #disconnect-button {
 	background-color: #ff4500;
+}
+
+#header-container {
+    border-bottom: #1D3557 1px solid;
+    margin-bottom: 20px;
 }
 
 .gr {

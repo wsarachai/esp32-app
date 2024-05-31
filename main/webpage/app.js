@@ -112,8 +112,16 @@ const Section = function (sectionId, title) {
   this.createHeader();
 };
 
+Section.prototype.getHeaderContainerId = function () {
+  return "header-container";
+};
+
 Section.prototype.createHeader = function () {
-  this.appendChild(createElement("h2", {}, this.title));
+	  const headerContainer = createElement("div", {
+	    id: this.getHeaderContainerId(),
+	  });
+	  headerContainer.appendChild(createElement("h2", {}, this.title));
+	  this.appendChild(headerContainer);
 };
 
 Section.prototype.appendChild = function (element) {
@@ -132,11 +140,19 @@ const GeneralInfo = function () {
 GeneralInfo.prototype = Object.create(Section.prototype);
 
 GeneralInfo.prototype.createHeader = function () {
-  this.currentTime = createElement("div", { class: "time-data" });
+	  const headerContainer = createElement("div", {
+	    id: this.getHeaderContainerId(),
+	  });
+	  
   const header = createElement("div", { class: "flex-container" });
+  this.currentTime = createElement("div", { class: "time-data" });
+  
   header.appendChild(createElement("h2", {}, this.title));
   header.appendChild(this.currentTime);
-  this.appendChild(header);
+  
+  headerContainer.appendChild(header);
+  
+  this.appendChild(headerContainer);
 };
 
 GeneralInfo.prototype.createSensorInfo = function () {
@@ -959,17 +975,11 @@ $(document).ready(function () {
   firmwareUpdate.getUpdateStatus();
 
   mainContainer.appendChild(generalInfo);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(systemConfig);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(manualControl);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(ssidInfo);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(wifiConnection);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(wifiConnectionInfo);
-  mainContainer.appendChild(createElement("hr"));
   mainContainer.appendChild(firmwareUpdate);
 
   const getESPServerStatusBind = getESPServerStatus.bind(
