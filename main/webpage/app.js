@@ -48,9 +48,16 @@ HTMLElement.prototype.appendChild = function (child) {
 };
 
 ////////////////////////////////////////
-// Class Definition
+// Image
 ////////////////////////////////////////
+const Image = function(id) {
+	this.id = id;
+	this.imageContainer = createElement("div", { id: this.id });
+}
 
+////////////////////////////////////////
+// Progress Bar
+////////////////////////////////////////
 const ProgressBar = function (id) {
   this.id = id;
   this.barContainer = createElement("div", { id: this.id });
@@ -207,7 +214,6 @@ GeneralInfo.prototype.setCurrentTime = function (time) {
 GeneralInfo.prototype.setTemperatureReading = function (temperature) {
   this.temperatureReading.innerHTML =
     parseFloat(temperature).toFixed(2) + " °C";
-  this.humidityBar.setProgress(temperature);
 };
 
 GeneralInfo.prototype.setHumidityReading = function (humidity) {
