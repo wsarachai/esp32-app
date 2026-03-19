@@ -19,23 +19,24 @@
 
 esp_err_t i2c_master_init(i2c_port_t port, int sda, int scl)
 {
-        i2c_config_t i2c_config = {
-                .mode = I2C_MODE_MASTER,
-                .sda_io_num = sda,
-                .scl_io_num = scl,
-                .sda_pullup_en = GPIO_PULLUP_ENABLE,
-                .scl_pullup_en = GPIO_PULLUP_ENABLE,
-                .master.clk_speed = 1000000
-        };
-        //i2c_param_config(I2C_NUM_0, &i2c_config);
-        //i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
-        i2c_param_config(port, &i2c_config);
-        return i2c_driver_install(port, I2C_MODE_MASTER, 0, 0, 0);
+    i2c_config_t i2c_config = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = sda,
+        .scl_io_num = scl,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 1000000};
+
+    // i2c_param_config(I2C_NUM_0, &i2c_config);
+    // i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
+    i2c_param_config(port, &i2c_config);
+    return i2c_driver_install(port, I2C_MODE_MASTER, 0, 0, 0);
 }
 
 esp_err_t i2c_dev_read(const i2c_dev_t *dev, const void *out_data, size_t out_size, void *in_data, size_t in_size)
 {
-    if (!dev || !in_data || !in_size) return ESP_ERR_INVALID_ARG;
+    if (!dev || !in_data || !in_size)
+        return ESP_ERR_INVALID_ARG;
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
@@ -67,7 +68,7 @@ esp_err_t i2c_dev_write(const i2c_dev_t *dev, const void *out_reg, size_t out_re
 {
     if (!dev || !out_data || !out_size)
     {
-    	return ESP_ERR_INVALID_ARG;
+        return ESP_ERR_INVALID_ARG;
     }
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -92,6 +93,3 @@ esp_err_t i2c_dev_write(const i2c_dev_t *dev, const void *out_reg, size_t out_re
 
     return res;
 }
-
-
-

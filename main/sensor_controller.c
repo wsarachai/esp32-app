@@ -67,6 +67,13 @@ static void sensor_ctrl_monitor(void *parameter)
 
 	for (;;)
 	{
+		if (sensor_ctl_monitor_queue_handle == NULL)
+		{
+			ESP_LOGE(TAG, "Sensor monitor queue is not initialized");
+			vTaskDelay(pdMS_TO_TICKS(1000));
+			continue;
+		}
+
 		if (xQueueReceive(sensor_ctl_monitor_queue_handle, &msg, portMAX_DELAY))
 		{
 			switch (msg.msgID)
@@ -221,16 +228,26 @@ BaseType_t sensor_ctl_monitor_send_message(sensor_ctl_message_e msgID)
 {
 	sensor_ctl_queue_message_t msg;
 	msg.msgID = msgID;
+	if (sensor_ctl_monitor_queue_handle == NULL)
+	{
+		ESP_LOGE(TAG, "Cannot send sensor message %d, queue not initialized", (int)msgID);
+		return pdFALSE;
+	}
 	return xQueueSend(sensor_ctl_monitor_queue_handle, &msg, portMAX_DELAY);
 }
 
 void SENSOR_CTRL_task_start(void)
 {
+	// Create the message queue before tasks use it.
+	sensor_ctl_monitor_queue_handle = xQueueCreate(3, sizeof(sensor_ctl_queue_message_t));
+	if (sensor_ctl_monitor_queue_handle == NULL)
+	{
+		ESP_LOGE(TAG, "Failed to create sensor monitor queue");
+		return;
+	}
+
 	// Create HTTP server monitor task
 	xTaskCreatePinnedToCore(&sensor_ctrl_monitor, "sensor_monitor", SENSOR_MONITOR_TASK_STACK_SIZE, NULL, SENSOR_MONITOR_TASK_PRIORITY, &task_sensor_monitor, SENSOR_MONITOR_TASK_CORE_ID);
-
-	// Create the message queue
-	sensor_ctl_monitor_queue_handle = xQueueCreate(3, sizeof(sensor_ctl_queue_message_t));
 
 	xTaskCreatePinnedToCore(&sensor_ctrl_task, "SENSOR_CTRL_task", SENSOR_CTRL_TASK_STACK_SIZE, NULL, SENSOR_CTRL_TASK_PRIORITY, NULL, SENSOR_CTRL_TASK_CORE_ID);
 }

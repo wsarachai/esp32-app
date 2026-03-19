@@ -1,13 +1,19 @@
 {
-    "files.associations": {
-        "ledc.h": "c",
-        "esp_err.h": "c",
-        "rgb_led.h": "c",
-        "wifi_app.h": "c",
-        "http_server.h": "c",
-        "aws_iot_mqtt_client_interface.h": "c",
-        "aws_iot_version.h": "c",
-        "aws_iot_config.h": "c"
-    },
-    "idf.adapterTargetName": "esp32"
+  "C_Cpp.intelliSenseEngine": "default",
+  "clangd.path": "C:\\Espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=c:\\Users\\ASUS\\workspaces\\esp32-idf\\esp32-idf-iot\\esp-idf-iot\\build"
+  ],
+  "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
+  "idf.openOcdConfigs": [
+    "board/esp32-bridge.cfg"
+  ],
+  "idf.portWin": "COM3",
+  "idf.flashType": "UART",
+  "idf.monitorPort": "COM3",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32"
+  }
 }
