@@ -1,58 +1,76 @@
-/**
- * Application entry point.
- */
-
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
-
-#include "water_ctl.h"
-#include "sensor_controller.h"
-#include "ds3231.h"
-#include "aws_iot.h"
-#include "sntp_time_sync.h"
+#include "app_nvs.h"
+#include "http_server.h"
+#include "task_settings.h"
 #include "wifi_app.h"
-#include "wifi_reset_button.h"
+#include "main.h"
 
-#include "esp_log.h"
+// Tag used for ESP serial console messages
+static const char TAG [] = "main_app";
 
-static const char TAG[] = "main";
+// Queue handle used to manipulate the main queue of events.
+QueueHandle_t app_queue_handle;
 
-void wifi_application_connected_events(void)
+BaseType_t app_send_message(app_event_id_t eventID)
 {
-  ESP_LOGI(TAG, "WiFi Application Connected!!");
-  // sntp_time_sync_task_start();
-  // aws_iot_start();
+  app_event_t msg;
+  msg.event_id = eventID;
+  return xQueueSend(app_queue_handle, &msg, portMAX_DELAY);
+}
+
+static void main_task(void *pvParameters)
+{
+  (void)pvParameters;
+
+  app_queue_handle = xQueueCreate(10, sizeof(app_event_t));
+  if (app_queue_handle == NULL)
+  {
+    printf("Failed to create app queue\n");
+    vTaskDelete(NULL);
+  }
+
+  wifi_app_start();
+
+  while (1)
+  {
+    app_event_t app_event;
+    if (xQueueReceive(app_queue_handle, &app_event, pdMS_TO_TICKS(1000)) == pdPASS)
+    {
+      printf("main_task received event id: %lu\n", (unsigned long)app_event.event_id);
+      switch (app_event.event_id)
+      {
+      case WIFI_APP_MSG_START_HTTP_SERVER:
+					ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
+
+					http_server_start();
+        break;
+
+      case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
+          ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
+
+					app_nvs_save_sta_creds();
+          
+          break;
+
+      default:
+        break;
+      }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
 }
 
 void app_main(void)
 {
-  ESP_LOGI(TAG, "[APP] Startup..");
-  ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-  ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-
-  // Initialize NVS
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
-  water_ctl_configure();
-
-  // Start Wifi
-  wifi_app_start();
-
-  // Configure Wifi reset button
-  wifi_reset_button_config();
-
-  // Start DS3231 RTC task
-  DS3231_task_start();
-
-  // Start sensor controller task
-  SENSOR_CTRL_task_start();
-
-  // Set connected event callback
-  wifi_app_set_callback(&wifi_application_connected_events);
+  xTaskCreatePinnedToCore(main_task,
+                          "main_task",
+                          MAIN_TASK_STACK_SIZE,
+                          NULL,
+                          MAIN_TASK_PRIORITY,
+                          NULL,
+                          MAIN_TASK_CORE_ID);
 }

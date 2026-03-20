@@ -1,48 +1,18 @@
-/*
- * app_nvs.h
- *
- *  Created on: May 12, 2024
- *      Author: keng
- */
+#ifndef APP_NVS_H
+#define APP_NVS_H
 
-#ifndef MAIN_APP_NVS_H_
-#define MAIN_APP_NVS_H_
+#include "esp_err.h"
 
-/**
- * Saves station mode Wifi credentials to NVS
- * @return ESP_OK if successful.
- */
+// Initializes the default NVS partition with standard recovery logic.
+esp_err_t app_nvs_init(void);
+
+// Erases the default NVS partition.
+esp_err_t app_nvs_erase(void);
+
+// Saves STA credentials in NVS under the "wifi" namespace.
 esp_err_t app_nvs_save_sta_creds(void);
 
-/**
- * Loads the previously saved credentials from NVS.
- * @return true if previously saved credentials were found.
- */
-bool app_nvs_load_sta_creds(void);
+// Loads STA credentials from NVS and applies them to the WiFi STA config.
+esp_err_t app_nvs_load_sta_creds(void);
 
-/**
- * Clears station mode credentials from NVS
- * @return ESP_OK if successful.
- */
-esp_err_t app_nvs_clear_sta_creds(void);
-
-
-/**
- * Saves water config values to NVS
- * @return ESP_OK if successful.
- */
-esp_err_t app_nvs_save_water_configs(void);
-
-/**
- * Loads the previously saved water configs from NVS.
- * @return true if previously saved water configs were found.
- */
-bool app_nvs_load_water_configs(void);
-
-/**
- * Clears water configs from NVS
- * @return ESP_OK if successful.
- */
-esp_err_t app_nvs_clear_water_configs(void);
-
-#endif /* MAIN_APP_NVS_H_ */
+#endif // APP_NVS_H

@@ -4,9 +4,16 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=c:\\Users\\ASUS\\workspaces\\esp32-idf\\esp-idf-iot\\examples\\WifiWeb\\build"
+    "--compile-commands-dir=c:\\Users\\ASUS\\workspaces\\esp32-idf\\esp32-idf-iot\\esp-idf-iot\\build"
   ],
   "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
+  "idf.openOcdConfigs": [
+    "board/esp32-bridge.cfg"
+  ],
   "idf.portWin": "COM3",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "idf.monitorPort": "COM3",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32"
+  }
 }
