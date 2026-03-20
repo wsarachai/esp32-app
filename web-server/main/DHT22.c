@@ -35,6 +35,11 @@
 
 #define DHT_GPIO 25
 
+#define DHT_RESP_LOW_TIMEOUT_US 100
+#define DHT_RESP_HIGH_TIMEOUT_US 100
+#define DHT_BIT_LOW_TIMEOUT_US 70
+#define DHT_BIT_HIGH_TIMEOUT_US 100
+
 // == global defines =============================================
 
 static const char *TAG = "DHT";
@@ -47,6 +52,8 @@ esp_err_t DHT22_init(void)
 {
     // DHT GPIO pin init
     DHT22_set_gpio(DHT_GPIO);
+    gpio_set_pull_mode(DHTgpio, GPIO_PULLUP_ONLY);
+    ESP_LOGI(TAG, "DHT22 initialized on GPIO%d", DHTgpio);
 
     return ESP_OK;
 }
@@ -55,6 +62,7 @@ esp_err_t DHT22_init(void)
 void DHT22_set_gpio(int gpio)
 {
     DHTgpio = gpio;
+    gpio_set_pull_mode(DHTgpio, GPIO_PULLUP_ONLY);
 }
 
 // == get temp & hum =============================================
@@ -174,17 +182,18 @@ static int readDHT()
     esp_rom_delay_us(25);
 
     gpio_set_direction(DHTgpio, GPIO_MODE_INPUT); // change to input mode
+    gpio_set_pull_mode(DHTgpio, GPIO_PULLUP_ONLY);
 
     // == DHT will keep the line low for 80 us and then high for 80us ====
 
-    uSec = get_signal_level(85, 0);
+    uSec = get_signal_level(DHT_RESP_LOW_TIMEOUT_US, 0);
     //    ESP_LOGI( TAG, "Response = %d", uSec );
     if (uSec < 0)
         return DHT_TIMEOUT_ERROR;
 
     // -- 80us up ------------------------
 
-    uSec = get_signal_level(85, 1);
+    uSec = get_signal_level(DHT_RESP_HIGH_TIMEOUT_US, 1);
     //    ESP_LOGI( TAG, "Response = %d", uSec );
     if (uSec < 0)
         return DHT_TIMEOUT_ERROR;
@@ -194,12 +203,12 @@ static int readDHT()
     for (int k = 0; k < 40; k++)
     {
         // -- starts new data transmission with >50us low signal
-        uSec = get_signal_level(56, 0);
+        uSec = get_signal_level(DHT_BIT_LOW_TIMEOUT_US, 0);
         if (uSec < 0)
             return DHT_TIMEOUT_ERROR;
 
         // -- check to see if after >70us rx data is a 0 or a 1
-        uSec = get_signal_level(75, 1);
+        uSec = get_signal_level(DHT_BIT_HIGH_TIMEOUT_US, 1);
         if (uSec < 0)
             return DHT_TIMEOUT_ERROR;
 
