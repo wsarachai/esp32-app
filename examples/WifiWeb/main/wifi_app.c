@@ -226,6 +226,9 @@ static void wifi_app_task(void *pvParameters)
            WIFI_AP_SSID, WIFI_AP_PASSWORD);
   ESP_LOGI(TAG, "AP IP: %s", WIFI_AP_IP);
 
+  // Start HTTP server only after TCP/IP stack and WiFi driver are up.
+  app_send_message(WIFI_APP_MSG_START_HTTP_SERVER);
+
   // Initialisation is complete; the WiFi driver runs autonomously.
   vTaskDelete(NULL);
 }

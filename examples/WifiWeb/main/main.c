@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 #include "app_nvs.h"
+#include "http_server.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 #include "main.h"
+
+// Tag used for ESP serial console messages
+static const char TAG [] = "main_app";
 
 // Queue handle used to manipulate the main queue of events.
 QueueHandle_t app_queue_handle;
@@ -29,8 +34,6 @@ static void main_task(void *pvParameters)
 
   wifi_app_start();
 
-  app_send_message(WIFI_APP_MSG_LOAD_SAVED_CREDENTIALS);
-
   while (1)
   {
     app_event_t app_event;
@@ -39,13 +42,18 @@ static void main_task(void *pvParameters)
       printf("main_task received event id: %lu\n", (unsigned long)app_event.event_id);
       switch (app_event.event_id)
       {
-      case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
-        ESP_ERROR_CHECK(app_nvs_save_sta_creds());
+      case WIFI_APP_MSG_START_HTTP_SERVER:
+					ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
+
+					http_server_start();
         break;
 
-      case WIFI_APP_MSG_LOAD_SAVED_CREDENTIALS:
-        ESP_ERROR_CHECK(app_nvs_load_sta_creds());
-        break;
+      case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
+          ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
+
+					app_nvs_save_sta_creds();
+          
+          break;
 
       default:
         break;
