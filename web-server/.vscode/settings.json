@@ -1,11 +1,13 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
   "clangd.path": "C:\\Espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=c:\\Users\\ASUS\\workspaces\\esp32-idf\\esp-idf-iot\\examples\\WifiWeb\\build"
+    "--compile-commands-dir=${workspaceFolder}/build"
   ],
+  "idf.buildPath": "${workspaceFolder}/build",
   "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
   "idf.portWin": "COM3",
   "idf.flashType": "UART"

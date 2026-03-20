@@ -14,6 +14,7 @@
 
 #include "app_nvs.h"
 #include "main.h"
+#include "rgb-led.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 
@@ -124,12 +125,14 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       ESP_LOGI(TAG, "STA connected to AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
+      rgb_led_wifi_connected();
       break;
 
     case WIFI_EVENT_STA_DISCONNECTED:
       ESP_LOGI(TAG, "STA disconnected from AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT | WIFI_APP_STA_GOT_IP_BIT);
+      rgb_led_wifi_disconnected();
       break;
 
     default:

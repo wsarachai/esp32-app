@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "app_nvs.h"
 #include "http_server.h"
+#include "rgb-led.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 #include "main.h"
@@ -32,7 +33,14 @@ static void main_task(void *pvParameters)
     vTaskDelete(NULL);
   }
 
+  esp_err_t led_init_status = rgb_led_init();
+  if (led_init_status != ESP_OK)
+  {
+    ESP_LOGE(TAG, "RGB LED init failed: %s", esp_err_to_name(led_init_status));
+  }
+
   wifi_app_start();
+  rgb_led_wifi_app_started();
 
   while (1)
   {
@@ -45,7 +53,10 @@ static void main_task(void *pvParameters)
       case WIFI_APP_MSG_START_HTTP_SERVER:
 					ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
 
-					http_server_start();
+          if (http_server_start() == ESP_OK)
+          {
+            rgb_led_http_server_started();
+          }
         break;
 
       case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
