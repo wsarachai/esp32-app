@@ -9,6 +9,7 @@ typedef struct
 {
     float humidity;
     float temperature;
+    float soilMoisture;
     bool valid;
     int64_t timestamp_us;
 } sensor_snapshot_t;

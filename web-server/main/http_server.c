@@ -106,6 +106,7 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   sensor_snapshot_t snapshot = {
       .humidity = -1.0f,
       .temperature = -1000.0f,
+      .soilMoisture = 0.0f,
       .valid = false,
       .timestamp_us = 0,
   };
@@ -120,9 +121,10 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":0.0,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0}",
+      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0}",
       snapshot.temperature,
-      snapshot.humidity);
+      snapshot.humidity,
+      snapshot.soilMoisture);
 
   if (written < 0 || written >= (int)sizeof(json_response))
   {
