@@ -4,6 +4,7 @@
 
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "http_server_monitor.h"
 #include "sensor_cache.h"
 
 static const char TAG[] = "http_server";
@@ -245,6 +246,20 @@ esp_err_t http_server_start(void)
     return err;
   }
 
+  err = http_server_monitor_start();
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to start HTTP monitor task: %s", esp_err_to_name(err));
+    httpd_stop(s_server);
+    s_server = NULL;
+    return err;
+  }
+
   ESP_LOGI(TAG, "HTTP server started");
   return ESP_OK;
+}
+
+bool http_server_is_running(void)
+{
+  return (s_server != NULL);
 }

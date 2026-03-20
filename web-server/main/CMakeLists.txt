@@ -1,4 +1,4 @@
-idf_component_register(SRCS "sensor_cache.c" "soil_moisture_adc.c" "main.c"
+idf_component_register(SRCS "http_server_monitor.c" "sensor_cache.c" "soil_moisture_adc.c" "main.c"
                              "app_nvs.c"
                              "http_server.c"
                              "wifi_app.c"
