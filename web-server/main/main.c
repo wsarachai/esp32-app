@@ -9,6 +9,7 @@
 #include "sensor_cache.h"
 #include "task_settings.h"
 #include "wifi_app.h"
+#include "http_server_monitor.h"
 #include "main.h"
 
 // Tag used for ESP serial console messages
@@ -69,6 +70,17 @@ static void main_task(void *pvParameters)
 
         app_nvs_save_sta_creds();
 
+        break;
+
+      case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:
+        ESP_LOGI(TAG, "WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER");
+
+        if (wifi_app_connect_sta() != ESP_OK)
+        {
+          ESP_LOGE(TAG, "Failed to start STA connection from HTTP server event");
+        }
+
+        http_server_monitor_send_message(HTTP_MSG_WIFI_CONNECT_INIT);
         break;
 
       default:

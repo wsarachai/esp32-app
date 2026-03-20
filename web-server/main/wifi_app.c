@@ -21,11 +21,57 @@
 static const char *TAG = "wifi_app";
 static wifi_config_t s_ap_config;
 static wifi_config_t s_sta_config;
+static volatile uint8_t s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
 
 /**
  * Wifi application event group handle and status bits
  */
 static EventGroupHandle_t wifi_app_event_group;
+
+uint8_t wifi_app_get_sta_connect_status(void)
+{
+  return s_sta_connect_status;
+}
+
+esp_err_t wifi_app_connect_sta(void)
+{
+  char cfg_ssid[MAX_SSID_LENGTH + 1] = {0};
+  char cfg_password[MAX_PASSWORD_LENGTH + 1] = {0};
+  esp_err_t err = wifi_app_get_sta_creds(cfg_ssid, sizeof(cfg_ssid), cfg_password, sizeof(cfg_password));
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "No valid STA credentials to connect: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  wifi_config_t sta_cfg = {0};
+  memcpy(sta_cfg.sta.ssid, cfg_ssid, strlen(cfg_ssid));
+  memcpy(sta_cfg.sta.password, cfg_password, strlen(cfg_password));
+  sta_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+  sta_cfg.sta.pmf_cfg.capable = true;
+  sta_cfg.sta.pmf_cfg.required = false;
+
+  ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_disconnect());
+
+  err = esp_wifi_set_config(WIFI_IF_STA, &sta_cfg);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "esp_wifi_set_config failed: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  err = esp_wifi_connect();
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "esp_wifi_connect failed: %s", esp_err_to_name(err));
+    s_sta_connect_status = WIFI_STA_CONNECT_STATUS_FAILED;
+    return err;
+  }
+
+  s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
+  ESP_LOGI(TAG, "Started STA connection attempt to SSID: %s", cfg_ssid);
+  return ESP_OK;
+}
 
 esp_err_t wifi_app_set_sta_creds(const char *ssid, const char *password)
 {
@@ -125,6 +171,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       ESP_LOGI(TAG, "STA connected to AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
+      s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
       rgb_led_wifi_connected();
       break;
 
@@ -132,6 +179,14 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       ESP_LOGI(TAG, "STA disconnected from AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT | WIFI_APP_STA_GOT_IP_BIT);
+      if (s_sta_connect_status == WIFI_STA_CONNECT_STATUS_CONNECTING)
+      {
+        s_sta_connect_status = WIFI_STA_CONNECT_STATUS_FAILED;
+      }
+      else
+      {
+        s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
+      }
       rgb_led_wifi_disconnected();
       break;
 
@@ -146,6 +201,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       ip_event_got_ip_t *e = (ip_event_got_ip_t *)event_data;
       ESP_LOGI(TAG, "STA got IP: " IPSTR, IP2STR(&e->ip_info.ip));
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_GOT_IP_BIT);
+      s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTED;
       app_send_message(WIFI_APP_MSG_STA_CONNECTED_GOT_IP);
     }
   }

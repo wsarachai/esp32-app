@@ -36,6 +36,10 @@ static void http_server_monitor_task(void *pvParameters)
             case HTTP_SERVER_MONITOR_MSG_RESTART:
                 should_restart = true;
                 break;
+            case HTTP_MSG_WIFI_CONNECT_INIT:
+                // When WiFi connection is initiated, proactively check if the server is running and restart if not.
+                should_restart = true;
+                break;
             case HTTP_SERVER_MONITOR_MSG_CHECK_NOW:
             default:
                 break;
@@ -95,4 +99,14 @@ esp_err_t http_server_monitor_start(void)
 
     ESP_LOGI(TAG, "HTTP server monitor task started");
     return ESP_OK;
+}
+
+BaseType_t http_server_monitor_send_message(http_server_monitor_msg_id_t eventID)
+{
+    if (http_server_monitor_queue_handle == NULL)
+    {
+        return pdFAIL;
+    }
+    http_server_queue_message_t msg = {.msg_id = eventID};
+    return xQueueSend(http_server_monitor_queue_handle, &msg, pdMS_TO_TICKS(100));
 }

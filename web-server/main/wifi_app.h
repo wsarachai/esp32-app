@@ -36,6 +36,12 @@
 #define MAX_PASSWORD_LENGTH 64			  // IEEE standard maximum
 #define MAX_CONNECTION_RETRIES 5		  // Retry number on disconnect
 
+// Values used by /wifiConnectStatus endpoint
+#define WIFI_STA_CONNECT_STATUS_IDLE 0
+#define WIFI_STA_CONNECT_STATUS_CONNECTING 1
+#define WIFI_STA_CONNECT_STATUS_FAILED 2
+#define WIFI_STA_CONNECT_STATUS_CONNECTED 3
+
 /**
  * @brief Starts the WiFi Access Point.
  *        Spawns an internal FreeRTOS task that initialises the network stack,
@@ -43,6 +49,12 @@
  *        the WiFi driver continues to run in the background.
  */
 void wifi_app_start(void);
+
+// Applies current STA credentials to the WiFi driver and starts a connection attempt.
+esp_err_t wifi_app_connect_sta(void);
+
+// Returns the current STA connection status for HTTP/UI polling.
+uint8_t wifi_app_get_sta_connect_status(void);
 
 // Sets STA credentials into the WiFi configuration stored in this module.
 esp_err_t wifi_app_set_sta_creds(const char *ssid, const char *password);
