@@ -4,8 +4,8 @@
 #include "freertos/task.h"
 #include "esp_timer.h"
 
-// DHT22 sensor pin (GPIO 23)
-#define DHT_PIN GPIO_NUM_23
+// DHT22 sensor pin (GPIO 25)
+#define DHT_PIN GPIO_NUM_25
 #define DHT_TIMEOUT_US 100
 #define DHT_DATA_BITS 40
 
