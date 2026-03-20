@@ -4,8 +4,8 @@
 #include "freertos/task.h"
 #include "esp_timer.h"
 
-// DHT22 sensor pin (GPIO 25)
-#define DHT_PIN GPIO_NUM_25
+// DHT22 sensor pin (GPIO 32)
+#define DHT_PIN GPIO_NUM_32
 #define DHT_TIMEOUT_US 100
 #define DHT_DATA_BITS 40
 
@@ -13,27 +13,33 @@
  * Read 8 bits from DHT22
  * Returns false if timeout, true if success
  */
-static bool dht_read_bits(uint8_t *bits, int num_bits) {
-    for (int i = 0; i < num_bits; i++) {
+static bool dht_read_bits(uint8_t *bits, int num_bits)
+{
+    for (int i = 0; i < num_bits; i++)
+    {
         // Wait for LOW -> HIGH transition (start of bit)
         int timeout = 100;
-        while (gpio_get_level(DHT_PIN) == 0 && timeout--) {
+        while (gpio_get_level(DHT_PIN) == 0 && timeout--)
+        {
             esp_rom_delay_us(1);
         }
-        if (timeout <= 0) return false;
+        if (timeout <= 0)
+            return false;
 
         // Measure HIGH duration to determine bit value (0 or 1)
-        esp_rom_delay_us(30);  // Wait 30µs
+        esp_rom_delay_us(30); // Wait 30µs
         uint8_t bit = gpio_get_level(DHT_PIN);
         bits[i / 8] <<= 1;
         bits[i / 8] |= bit;
 
         // Wait for HIGH -> LOW transition (end of bit)
         timeout = 100;
-        while (gpio_get_level(DHT_PIN) == 1 && timeout--) {
+        while (gpio_get_level(DHT_PIN) == 1 && timeout--)
+        {
             esp_rom_delay_us(1);
         }
-        if (timeout <= 0) return false;
+        if (timeout <= 0)
+            return false;
     }
     return true;
 }
@@ -42,7 +48,8 @@ static bool dht_read_bits(uint8_t *bits, int num_bits) {
  * Read temperature and humidity from DHT22
  * Returns true if successful
  */
-static bool dht22_read(float *humidity, float *temperature) {
+static bool dht22_read(float *humidity, float *temperature)
+{
     uint8_t data[5] = {0};
 
     // Prepare GPIO as open-drain output
@@ -65,43 +72,51 @@ static bool dht22_read(float *humidity, float *temperature) {
 
     // Wait for DHT22 to respond (LOW pulse)
     int timeout = 100;
-    while (gpio_get_level(DHT_PIN) == 1 && timeout--) {
+    while (gpio_get_level(DHT_PIN) == 1 && timeout--)
+    {
         esp_rom_delay_us(1);
     }
-    if (timeout <= 0) {
+    if (timeout <= 0)
+    {
         printf("DHT22: No response signal detected\n");
         return false;
     }
 
     // Wait for response HIGH pulse
     timeout = 100;
-    while (gpio_get_level(DHT_PIN) == 0 && timeout--) {
+    while (gpio_get_level(DHT_PIN) == 0 && timeout--)
+    {
         esp_rom_delay_us(1);
     }
-    if (timeout <= 0) {
+    if (timeout <= 0)
+    {
         printf("DHT22: Response signal too short\n");
         return false;
     }
 
     // Wait for data transmission to start
     timeout = 100;
-    while (gpio_get_level(DHT_PIN) == 1 && timeout--) {
+    while (gpio_get_level(DHT_PIN) == 1 && timeout--)
+    {
         esp_rom_delay_us(1);
     }
-    if (timeout <= 0) {
+    if (timeout <= 0)
+    {
         printf("DHT22: No data transmission\n");
         return false;
     }
 
     // Read 40 bits of data
-    if (!dht_read_bits(data, DHT_DATA_BITS)) {
+    if (!dht_read_bits(data, DHT_DATA_BITS))
+    {
         printf("DHT22: Failed to read data bits\n");
         return false;
     }
 
     // Verify checksum
     uint8_t checksum = (data[0] + data[1] + data[2] + data[3]) & 0xFF;
-    if (checksum != data[4]) {
+    if (checksum != data[4])
+    {
         printf("DHT22: Checksum mismatch (expected %d, got %d)\n", data[4], checksum);
         return false;
     }
@@ -111,8 +126,9 @@ static bool dht22_read(float *humidity, float *temperature) {
 
     // Extract temperature (16-bit, high byte first, with sign bit)
     int16_t temp_raw = ((data[2] & 0x7F) << 8) | data[3];
-    if (data[2] & 0x80) {
-        temp_raw = -temp_raw;  // Negative temperature
+    if (data[2] & 0x80)
+    {
+        temp_raw = -temp_raw; // Negative temperature
     }
     *temperature = temp_raw / 10.0f;
 
@@ -131,15 +147,19 @@ void app_main(void)
     float temperature = 0;
     int read_count = 0;
 
-    while (1) {
-        if (dht22_read(&humidity, &temperature)) {
+    while (1)
+    {
+        if (dht22_read(&humidity, &temperature))
+        {
             read_count++;
-            printf("[%d] Humidity: %.1f%% | Temperature: %.1f°C\n", 
+            printf("[%d] Humidity: %.1f%% | Temperature: %.1f°C\n",
                    read_count, humidity, temperature);
-        } else {
+        }
+        else
+        {
             printf("[%d] Failed to read DHT22\n", read_count + 1);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(2000));  // Wait 2 seconds before next read
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Wait 2 seconds before next read
     }
 }
