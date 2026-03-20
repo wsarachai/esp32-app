@@ -5,6 +5,7 @@
 #include "app_nvs.h"
 #include "http_server.h"
 #include "rgb-led.h"
+#include "sensor_cache.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 #include "main.h"
@@ -77,6 +78,12 @@ static void main_task(void *pvParameters)
 
 void app_main(void)
 {
+  esp_err_t sensor_cache_status = sensor_cache_start();
+  if (sensor_cache_status != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Sensor cache task start failed: %s", esp_err_to_name(sensor_cache_status));
+  }
+
   xTaskCreatePinnedToCore(main_task,
                           "main_task",
                           MAIN_TASK_STACK_SIZE,

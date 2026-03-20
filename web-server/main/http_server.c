@@ -1,7 +1,10 @@
 #include "http_server.h"
 
+#include <stdio.h>
+
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "sensor_cache.h"
 
 static const char TAG[] = "http_server";
 static httpd_handle_t s_server = NULL;
@@ -98,6 +101,41 @@ static esp_err_t root_get_handler(httpd_req_t *req)
   return http_server_index_html_handler(req);
 }
 
+static esp_err_t http_server_status_handler(httpd_req_t *req)
+{
+  sensor_snapshot_t snapshot = {
+      .humidity = -1.0f,
+      .temperature = -1000.0f,
+      .valid = false,
+      .timestamp_us = 0,
+  };
+  bool has_snapshot = sensor_cache_get_snapshot(&snapshot);
+
+  if (!has_snapshot)
+  {
+    ESP_LOGW(TAG, "Sensor cache not ready; returning fallback values");
+  }
+
+  char json_response[320];
+  int written = snprintf(
+      json_response,
+      sizeof(json_response),
+      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":0.0,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0}",
+      snapshot.temperature,
+      snapshot.humidity);
+
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    ESP_LOGE(TAG, "Failed to create ESPServerStatus JSON response");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
 esp_err_t http_server_start(void)
 {
   if (s_server != NULL)
@@ -186,6 +224,20 @@ esp_err_t http_server_start(void)
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to register favicon.ico URI: %s", esp_err_to_name(err));
+    httpd_stop(s_server);
+    s_server = NULL;
+    return err;
+  }
+
+  httpd_uri_t esp_server_status = {
+      .uri = "/ESPServerStatus.json",
+      .method = HTTP_GET,
+      .handler = http_server_status_handler,
+      .user_ctx = NULL};
+  err = httpd_register_uri_handler(s_server, &esp_server_status);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to register ESPServerStatus URI: %s", esp_err_to_name(err));
     httpd_stop(s_server);
     s_server = NULL;
     return err;

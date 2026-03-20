@@ -1,7 +1,8 @@
-idf_component_register(SRCS "main.c"
+idf_component_register(SRCS "sensor_cache.c" "main.c"
                              "app_nvs.c"
                              "http_server.c"
                              "wifi_app.c"
                              "rgb-led.c"
+                             "dht22.c"
                     INCLUDE_DIRS "."
                     EMBED_FILES "webpage/app.css" "webpage/app.js" "webpage/favicon.ico" "webpage/index.html" "webpage/jquery-3.3.1.min.js")
