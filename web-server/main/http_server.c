@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "http_server_monitor.h"
 #include "sensor_cache.h"
+#include "relay.h"
 
 static const char TAG[] = "http_server";
 static httpd_handle_t s_server = NULL;
@@ -118,14 +119,17 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
     ESP_LOGW(TAG, "Sensor cache not ready; returning fallback values");
   }
 
+  const char *relay_status = relay_get_state() ? "ON" : "OFF";
+
   char json_response[320];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0}",
+      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0,\"relay-status\":\"%s\"}",
       snapshot.temperature,
       snapshot.humidity,
-      snapshot.soilMoisture);
+      snapshot.soilMoisture,
+      relay_status);
 
   if (written < 0 || written >= (int)sizeof(json_response))
   {
@@ -137,6 +141,81 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   httpd_resp_set_type(req, "application/json");
   httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
   return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
+/**
+ * Relay status handler - returns current relay state
+ * GET /relayStatus.json
+ */
+static esp_err_t http_server_relay_status_handler(httpd_req_t *req)
+{
+  ESP_LOGI(TAG, "Relay status requested");
+
+  char json_response[64];
+  int written = snprintf(
+      json_response,
+      sizeof(json_response),
+      "{\"relay_status\":\"OFF\"}");
+
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    ESP_LOGE(TAG, "Failed to create relay status JSON response");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
+/**
+ * Relay control handler - controls relay ON/OFF
+ * POST /relayControl.json
+ * Header: "relay-control" with value "1" (ON) or "0" (OFF)
+ */
+static esp_err_t http_server_relay_control_handler(httpd_req_t *req)
+{
+  ESP_LOGI(TAG, "Relay control requested");
+
+  char relay_control_header[16] = {0};
+  size_t relay_control_len = httpd_req_get_hdr_value_len(req, "relay-control");
+
+  if (relay_control_len > 0 && relay_control_len < sizeof(relay_control_header))
+  {
+    httpd_req_get_hdr_value_str(req, "relay-control", relay_control_header, relay_control_len + 1);
+    bool relay_enabled = (relay_control_header[0] == '1');
+
+    esp_err_t err = relay_set(relay_enabled);
+    if (err != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to set relay: %s", esp_err_to_name(err));
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to control relay");
+      return ESP_FAIL;
+    }
+
+    char json_response[64];
+    int written = snprintf(
+        json_response,
+        sizeof(json_response),
+        "{\"relay_status\":\"%s\"}",
+        relay_enabled ? "ON" : "OFF");
+
+    if (written < 0 || written >= (int)sizeof(json_response))
+    {
+      ESP_LOGE(TAG, "Failed to create relay control JSON response");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+      return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+    return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+  }
+
+  ESP_LOGE(TAG, "Missing or invalid relay-control header");
+  httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing relay-control header");
+  return ESP_FAIL;
 }
 
 esp_err_t http_server_start(void)
@@ -241,6 +320,36 @@ esp_err_t http_server_start(void)
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to register ESPServerStatus URI: %s", esp_err_to_name(err));
+    httpd_stop(s_server);
+    s_server = NULL;
+    return err;
+  }
+
+  // Register relay status endpoint
+  httpd_uri_t relay_status = {
+      .uri = "/relayStatus.json",
+      .method = HTTP_GET,
+      .handler = http_server_relay_status_handler,
+      .user_ctx = NULL};
+  err = httpd_register_uri_handler(s_server, &relay_status);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to register relay status URI: %s", esp_err_to_name(err));
+    httpd_stop(s_server);
+    s_server = NULL;
+    return err;
+  }
+
+  // Register relay control endpoint
+  httpd_uri_t relay_control = {
+      .uri = "/relayControl.json",
+      .method = HTTP_POST,
+      .handler = http_server_relay_control_handler,
+      .user_ctx = NULL};
+  err = httpd_register_uri_handler(s_server, &relay_control);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to register relay control URI: %s", esp_err_to_name(err));
     httpd_stop(s_server);
     s_server = NULL;
     return err;

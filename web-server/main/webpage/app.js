@@ -50,9 +50,9 @@ HTMLElement.prototype.appendChild = function (child) {
 ////////////////////////////////////////
 // Image
 ////////////////////////////////////////
-const Image = function(id) {
-	this.id = id;
-	this.imageContainer = createElement("div", { id: this.id });
+const Image = function (id) {
+  this.id = id;
+  this.imageContainer = createElement("div", { id: this.id });
 }
 
 ////////////////////////////////////////
@@ -117,11 +117,11 @@ Section.prototype.getHeaderContainerId = function () {
 };
 
 Section.prototype.createHeader = function () {
-	  const headerContainer = createElement("div", {
-	    id: this.getHeaderContainerId(),
-	  });
-	  headerContainer.appendChild(createElement("h2", {}, this.title));
-	  this.appendChild(headerContainer);
+  const headerContainer = createElement("div", {
+    id: this.getHeaderContainerId(),
+  });
+  headerContainer.appendChild(createElement("h2", {}, this.title));
+  this.appendChild(headerContainer);
 };
 
 Section.prototype.appendChild = function (element) {
@@ -140,18 +140,18 @@ const GeneralInfo = function () {
 GeneralInfo.prototype = Object.create(Section.prototype);
 
 GeneralInfo.prototype.createHeader = function () {
-	  const headerContainer = createElement("div", {
-	    id: this.getHeaderContainerId(),
-	  });
-	  
+  const headerContainer = createElement("div", {
+    id: this.getHeaderContainerId(),
+  });
+
   const header = createElement("div", { class: "flex-container" });
   this.currentTime = createElement("div", { class: "time-data" });
-  
+
   header.appendChild(createElement("h2", {}, this.title));
   header.appendChild(this.currentTime);
-  
+
   headerContainer.appendChild(header);
-  
+
   this.appendChild(headerContainer);
 };
 
@@ -177,7 +177,7 @@ GeneralInfo.prototype.createSensorInfo = function () {
     class: "data",
   });
   this.humidityBar = new ProgressBar("humidity-bar");
-  
+
   humidityInfo.appendChild(this.humidityReading);
   humidityInfo.appendChild(this.humidityBar);
 
@@ -194,7 +194,7 @@ GeneralInfo.prototype.createSensorInfo = function () {
     class: "data",
   });
   this.soilMoistureBar = new SoilMoistureProgressBar("soil-moisture-bar");
-  
+
   soilMoistureInfo.appendChild(this.soilMoistureReading);
   soilMoistureInfo.appendChild(this.soilMoistureBar);
 
@@ -370,95 +370,96 @@ SystemConfig.prototype.saveWaterConfigure = function () {
 };
 
 ////////////////////////////////////////
-// Manual Control
+// Relay Control
 ////////////////////////////////////////
-const WATER_ON = "เปิดวาล์ว";
-const WATER_OFF = "ปิดวาล์ว";
+const RELAY_ON = "เปิด";
+const RELAY_OFF = "ปิด";
 
-const ManualControl = function () {
-  Section.call(this, "manual-control", "เปิด/ปิด วาล์วน้ำ");
+const RelayControl = function () {
+  Section.call(this, "relay-control", "ควบคุมรีเลย์");
 
   this.createBodyInfo();
 };
-ManualControl.prototype = Object.create(Section.prototype);
+RelayControl.prototype = Object.create(Section.prototype);
 
-ManualControl.prototype.createBodyInfo = function () {
+RelayControl.prototype.createBodyInfo = function () {
   const divBody = createElement("div");
-  this.chkStatus = createElement("input", {
+  this.relayCheckbox = createElement("input", {
     type: "checkbox",
-    id: "manual-chk",
+    id: "relay-chk",
   });
   const lblStatus = createElement(
     "span",
-    { id: "manual-chk-label" },
+    { id: "relay-chk-label" },
     "กำหนดเอง"
   );
-  divBody.appendChild(this.chkStatus);
+  divBody.appendChild(this.relayCheckbox);
   divBody.appendChild(lblStatus);
 
-  this.onOffButton = createElement("button", { id: "on-off-button" }, WATER_ON);
+  this.relayButton = createElement("button", { id: "relay-button" }, RELAY_ON);
 
-  this.chkStatus.addEventListener("click", this.chkStatus_Click.bind(this));
-  this.onOffButton.addEventListener("click", this.toggleWaterOnOff.bind(this));
+  this.relayCheckbox.addEventListener("click", this.relayCheckbox_Click.bind(this));
+  this.relayButton.addEventListener("click", this.toggleRelayOnOff.bind(this));
 
   this.appendChild(divBody);
-  this.appendChild(this.onOffButton);
+  this.appendChild(this.relayButton);
 };
 
-ManualControl.prototype.saveManualOnOff = function (status) {
+RelayControl.prototype.relayCheckbox_Click = function () {
+  const relayButton = $(this.relayButton);
+  if (this.relayCheckbox.checked) {
+    relayButton.fadeIn("fast");
+  } else {
+    relayButton.fadeOut("fast");
+  }
+};
+
+RelayControl.prototype.toggleRelayOnOff = function () {
+  var relayStatus = $(this.relayButton).html() === RELAY_ON ? "OFF" : "ON";
+
   $.ajax({
-    url: "/manualOnOff.json",
+    url: "/relayControl.json",
     dataType: "json",
     method: "POST",
     cache: false,
     headers: {
-      "manual-on-off": status,
+      "relay-control": relayStatus === "ON" ? "1" : "0",
     },
     data: { timestamp: Date.now() },
+    success: (data) => {
+      this.setRelayButtonStatus(data["relay_status"]);
+    },
+    error: (xhr, status, error) => {
+      console.error("Failed to control relay:", error);
+    },
   });
 };
 
-ManualControl.prototype.chkStatus_Click = function () {
-  const onOffButton = $(this.onOffButton);
-  if (this.chkStatus.checked) {
-    onOffButton.fadeIn("fast");
-    this.saveManualOnOff("1");
-  } else {
-    onOffButton.fadeOut("fast");
-    this.saveManualOnOff("0");
+RelayControl.prototype.setRelayButtonStatus = function (status) {
+  const relayButton = $(this.relayButton);
+  if (status && status === "ON") {
+    relayButton.html(RELAY_ON);
+    relayButton.css("background", "#ff6b6b");
+  } else if (status && status === "OFF") {
+    relayButton.html(RELAY_OFF);
+    relayButton.css("background", "#1D3557");
   }
 };
 
-ManualControl.prototype.toggleWaterOnOff = function () {
-  var requestURL = "/toggleWaterOnOff.json";
-
+RelayControl.prototype.getRelayStatus = function () {
+  var requestURL = "/relayStatus.json";
+  
   fetch(requestURL, {
     method: "GET",
     cache: "no-cache",
   })
     .then((response) => response.json())
     .then((data) => {
-      this.setOnOffButtonStatus(data["water_status"]);
-    });
-};
-
-ManualControl.prototype.hideOnOffButton = function (status) {
-  $(this.onOffButton).hide();
-};
-
-ManualControl.prototype.showOnOffButton = function (status) {
-  $(this.onOffButton).show();
-};
-
-ManualControl.prototype.setOnOffButtonStatus = function (status) {
-  const onOffButton = $(this.onOffButton);
-  if (status && status === "ON") {
-    onOffButton.html(WATER_ON);
-    onOffButton.css("background", "#32cd32");
-  } else if (status && status === "OFF") {
-    onOffButton.html(WATER_OFF);
-    onOffButton.css("background", "#1D3557");
-  }
+      if (data["relay_status"]) {
+        this.setRelayButtonStatus(data["relay_status"]);
+      }
+    })
+    .catch((error) => console.error("Failed to get relay status:", error));
 };
 
 ////////////////////////////////////////
@@ -886,7 +887,7 @@ FirmwareUpdate.prototype.setLatestFirmwareDate = function (latestDate) {
 FirmwareUpdate.prototype.otaRebootTimer = function () {
   this.setOTAUpdateStatus(
     "OTA: อัพเดตเฟิร์มแวร์เรียบร้อยแล้ว โปรแกรมกำลังจะปิดในอีกซักครู่เพื่อเริ่มต้นระบบใหม่ในอีก: " +
-      this.seconds
+    this.seconds
   );
 
   if (--this.seconds == 0) {
@@ -934,7 +935,7 @@ let mainContainer = null;
 function getESPServerStatus(
   generalInfo,
   systemConfig,
-  manualControl,
+  relayControl,
   wifiConnectionInfo
 ) {
   $.getJSON("/ESPServerStatus.json", function (data) {
@@ -947,7 +948,9 @@ function getESPServerStatus(
     systemConfig.setMaxMoistureLevel(data["max-moiture-level"]);
     systemConfig.setMaxTimeSpend(data["duration"]);
 
-    manualControl.setOnOffButtonStatus(data["water-status"]);
+    if (data["relay-status"]) {
+      relayControl.setRelayButtonStatus(data["relay-status"]);
+    }
 
     if (parseInt(data["wifi-connect-status"]) == 3) {
       if (isEmpty(wifiConnectionInfo.getConnectedAPName())) {
@@ -964,19 +967,20 @@ $(document).ready(function () {
 
   const generalInfo = new GeneralInfo();
   const systemConfig = new SystemConfig();
-  const manualControl = new ManualControl();
+  const relayControl = new RelayControl();
   const ssidInfo = new SSIDInfo();
   const wifiConnectionInfo = new WiFiConnectionInfo();
   const wifiConnection = new WiFiConnection(wifiConnectionInfo);
   const firmwareUpdate = new FirmwareUpdate();
 
-  manualControl.hideOnOffButton();
+  $(relayControl.relayButton).hide();
+  relayControl.getRelayStatus();
   ssidInfo.getSSID();
   firmwareUpdate.getUpdateStatus();
 
   mainContainer.appendChild(generalInfo);
   mainContainer.appendChild(systemConfig);
-  mainContainer.appendChild(manualControl);
+  mainContainer.appendChild(relayControl);
   mainContainer.appendChild(ssidInfo);
   mainContainer.appendChild(wifiConnection);
   mainContainer.appendChild(wifiConnectionInfo);
@@ -986,7 +990,7 @@ $(document).ready(function () {
     null,
     generalInfo,
     systemConfig,
-    manualControl,
+    relayControl,
     wifiConnectionInfo
   );
   setInterval(getESPServerStatusBind, 5000);

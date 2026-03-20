@@ -5,13 +5,14 @@
 #include "app_nvs.h"
 #include "http_server.h"
 #include "rgb-led.h"
+#include "relay.h"
 #include "sensor_cache.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 #include "main.h"
 
 // Tag used for ESP serial console messages
-static const char TAG [] = "main_app";
+static const char TAG[] = "main_app";
 
 // Queue handle used to manipulate the main queue of events.
 QueueHandle_t app_queue_handle;
@@ -40,6 +41,9 @@ static void main_task(void *pvParameters)
     ESP_LOGE(TAG, "RGB LED init failed: %s", esp_err_to_name(led_init_status));
   }
 
+  relay_init();
+  ESP_LOGI(TAG, "Relay initialized");
+
   wifi_app_start();
   rgb_led_wifi_app_started();
 
@@ -52,20 +56,20 @@ static void main_task(void *pvParameters)
       switch (app_event.event_id)
       {
       case WIFI_APP_MSG_START_HTTP_SERVER:
-					ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
+        ESP_LOGI(TAG, "WIFI_APP_MSG_START_HTTP_SERVER");
 
-          if (http_server_start() == ESP_OK)
-          {
-            rgb_led_http_server_started();
-          }
+        if (http_server_start() == ESP_OK)
+        {
+          rgb_led_http_server_started();
+        }
         break;
 
       case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
-          ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
+        ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
 
-					app_nvs_save_sta_creds();
-          
-          break;
+        app_nvs_save_sta_creds();
+
+        break;
 
       default:
         break;
