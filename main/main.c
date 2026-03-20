@@ -48,7 +48,7 @@ void app_main(void)
   wifi_reset_button_config();
 
   // Start DS3231 RTC task
-  // DS3231_task_start();
+  DS3231_task_start();
 
   // Start sensor controller task
   SENSOR_CTRL_task_start();

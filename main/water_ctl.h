@@ -8,12 +8,11 @@
 #ifndef MAIN_WATER_CTL_H_
 #define MAIN_WATER_CTL_H_
 
-
-#define ANALOG_VOLTAGE_MAX_DEFAULT		3300 	// 3.3v
-#define MIN_MOI_LEVEL_DEFAULT			30		// 10%
-#define MAX_MOI_LEVEL_DEFAULT			80		// 10%
-#define WATER_DURATION_DEFAULT			20   	// one minute
-#define MANUAL_ON_OFF_DEFAULT			false
+#define ANALOG_VOLTAGE_MAX_DEFAULT 3300 // 3.3v
+#define MIN_MOI_LEVEL_DEFAULT 30				// 10%
+#define MAX_MOI_LEVEL_DEFAULT 80				// 10%
+#define WATER_DURATION_DEFAULT 20				// one minute
+#define MANUAL_ON_OFF_DEFAULT false
 
 /**
  * Structure for the water parameters
