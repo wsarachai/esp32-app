@@ -1066,38 +1066,38 @@ function getESPServerStatus(
 ) {
   $.getJSON("/ESPServerStatus.json")
     .done(function (data) {
-    markServerAvailable();
-    generalInfo.setCurrentTime(data["time"]);
-    const sensorDataAvailable = !!data["sensor-data-available"];
-    if (sensorDataAvailable) {
-      generalInfo.setDataAvailableState();
-      generalInfo.setTemperatureReading(data["temp"]);
-      generalInfo.setHumidityReading(data["humidity"]);
-      generalInfo.setSoilMoistureReading(data["soil-moisture"]);
-    } else {
-      generalInfo.setNoDataState(
-        parseInt(data["online-node-count"] || 0),
-        parseInt(data["registered-node-count"] || 0)
-      );
-    }
+      markServerAvailable();
+      generalInfo.setCurrentTime(data["time"]);
+      const sensorDataAvailable = !!data["sensor-data-available"];
+      if (sensorDataAvailable) {
+        generalInfo.setDataAvailableState();
+        generalInfo.setTemperatureReading(data["temp"]);
+        generalInfo.setHumidityReading(data["humidity"]);
+        generalInfo.setSoilMoistureReading(data["soil-moisture"]);
+      } else {
+        generalInfo.setNoDataState(
+          parseInt(data["online-node-count"] || 0),
+          parseInt(data["registered-node-count"] || 0)
+        );
+      }
 
-    systemConfig.setMinMoistureLevel(data["min-moiture-level"]);
-    systemConfig.setMaxMoistureLevel(data["max-moiture-level"]);
-    systemConfig.setMaxTimeSpend(data["duration"]);
+      systemConfig.setMinMoistureLevel(data["min-moiture-level"]);
+      systemConfig.setMaxMoistureLevel(data["max-moiture-level"]);
+      systemConfig.setMaxTimeSpend(data["duration"]);
 
-    if (data["relay-status"]) {
-      relayControl.setRelayButtonStatus(data["relay-status"]);
-    }
+      if (data["relay-status"]) {
+        relayControl.setRelayButtonStatus(data["relay-status"]);
+      }
 
-    if (parseInt(data["wifi-connect-status"]) == 3) {
-      wifiConnectionInfo.getConnectInfo();
-    } else {
-      wifiConnectionInfo.setConnectedAPName("Not Connected");
-      wifiConnectionInfo.setIPAddress("0.0.0.0");
-      wifiConnectionInfo.setNetmask("0.0.0.0");
-      wifiConnectionInfo.setGateway("0.0.0.0");
-      wifiConnectionInfo.hideDisconnectButton();
-    }
+      if (parseInt(data["wifi-connect-status"]) == 3) {
+        wifiConnectionInfo.getConnectInfo();
+      } else {
+        wifiConnectionInfo.setConnectedAPName("Not Connected");
+        wifiConnectionInfo.setIPAddress("0.0.0.0");
+        wifiConnectionInfo.setNetmask("0.0.0.0");
+        wifiConnectionInfo.setGateway("0.0.0.0");
+        wifiConnectionInfo.hideDisconnectButton();
+      }
     })
     .fail(function () {
       // Watchdog timer handles disable state after timeout window.
@@ -1129,11 +1129,11 @@ $(document).ready(function () {
   firmwareUpdate.getUpdateStatus();
 
   mainContainer.appendChild(generalInfo);
-  mainContainer.appendChild(systemConfig);
   mainContainer.appendChild(relayControl);
   mainContainer.appendChild(ssidInfo);
   mainContainer.appendChild(wifiConnection);
   mainContainer.appendChild(wifiConnectionInfo);
+  mainContainer.appendChild(systemConfig);
   mainContainer.appendChild(firmwareUpdate);
 
   const getESPServerStatusBind = getESPServerStatus.bind(

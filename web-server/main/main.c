@@ -18,6 +18,15 @@
 static const char TAG[] = "main_app";
 static bool s_sta_connect_requested_from_http = false;
 
+static void set_led_status(rgb_led_color_id_t color)
+{
+  esp_err_t err = rgb_led_set_color_by_id(color);
+  if (err != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Failed to set LED status color %d: %s", (int)color, esp_err_to_name(err));
+  }
+}
+
 // Queue handle used to manipulate the main queue of events.
 QueueHandle_t app_queue_handle;
 
@@ -49,7 +58,7 @@ static void main_task(void *pvParameters)
   ESP_LOGI(TAG, "Relay initialized");
 
   wifi_app_start();
-  rgb_led_wifi_app_started();
+  set_led_status(RGB_LED_COLOR_BLUE);
 
   while (1)
   {
@@ -64,8 +73,18 @@ static void main_task(void *pvParameters)
 
         if (http_server_start() == ESP_OK)
         {
-          rgb_led_http_server_started();
+          set_led_status(RGB_LED_COLOR_CYAN);
         }
+        break;
+
+      case WIFI_APP_MSG_STA_CONNECTED:
+        ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED");
+        set_led_status(RGB_LED_COLOR_GREEN);
+        break;
+
+      case WIFI_APP_MSG_STA_DISCONNECTED:
+        ESP_LOGI(TAG, "WIFI_APP_MSG_STA_DISCONNECTED");
+        set_led_status(RGB_LED_COLOR_RED);
         break;
 
       case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:

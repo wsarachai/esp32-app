@@ -14,7 +14,6 @@
 
 #include "app_nvs.h"
 #include "main.h"
-#include "rgb-led.h"
 #include "task_settings.h"
 #include "wifi_app.h"
 
@@ -172,7 +171,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
-      rgb_led_wifi_connected();
+      app_send_message(WIFI_APP_MSG_STA_CONNECTED);
       break;
 
     case WIFI_EVENT_STA_DISCONNECTED:
@@ -187,7 +186,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       {
         s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
       }
-      rgb_led_wifi_disconnected();
+      app_send_message(WIFI_APP_MSG_STA_DISCONNECTED);
       break;
 
     default:
