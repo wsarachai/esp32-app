@@ -110,30 +110,35 @@ static esp_err_t http_server_wifi_connect_info_handler(httpd_req_t *req)
   char ip_str[16] = "0.0.0.0";
   char netmask_str[16] = "0.0.0.0";
   char gw_str[16] = "0.0.0.0";
+  uint8_t sta_status = wifi_app_get_sta_connect_status();
 
-  wifi_ap_record_t ap_record;
-  if (esp_wifi_sta_get_ap_info(&ap_record) == ESP_OK)
+  if (sta_status == WIFI_STA_CONNECT_STATUS_CONNECTED)
   {
-    snprintf(ap_ssid, sizeof(ap_ssid), "%s", (const char *)ap_record.ssid);
-  }
-
-  esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-  if (sta_netif != NULL)
-  {
-    esp_netif_ip_info_t ip_info;
-    if (esp_netif_get_ip_info(sta_netif, &ip_info) == ESP_OK)
+    wifi_ap_record_t ap_record;
+    if (esp_wifi_sta_get_ap_info(&ap_record) == ESP_OK)
     {
-      snprintf(ip_str, sizeof(ip_str), IPSTR, IP2STR(&ip_info.ip));
-      snprintf(netmask_str, sizeof(netmask_str), IPSTR, IP2STR(&ip_info.netmask));
-      snprintf(gw_str, sizeof(gw_str), IPSTR, IP2STR(&ip_info.gw));
+      snprintf(ap_ssid, sizeof(ap_ssid), "%s", (const char *)ap_record.ssid);
+    }
+
+    esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (sta_netif != NULL)
+    {
+      esp_netif_ip_info_t ip_info;
+      if (esp_netif_get_ip_info(sta_netif, &ip_info) == ESP_OK)
+      {
+        snprintf(ip_str, sizeof(ip_str), IPSTR, IP2STR(&ip_info.ip));
+        snprintf(netmask_str, sizeof(netmask_str), IPSTR, IP2STR(&ip_info.netmask));
+        snprintf(gw_str, sizeof(gw_str), IPSTR, IP2STR(&ip_info.gw));
+      }
     }
   }
 
-  char json_response[192];
+  char json_response[232];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"ap\":\"%s\",\"ip\":\"%s\",\"netmask\":\"%s\",\"gw\":\"%s\"}",
+      "{\"wifi_connect_status\":%u,\"ap\":\"%s\",\"ip\":\"%s\",\"netmask\":\"%s\",\"gw\":\"%s\"}",
+      (unsigned int)sta_status,
       ap_ssid,
       ip_str,
       netmask_str,

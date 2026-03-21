@@ -1,25 +1,26 @@
 #include "sensor_cache.h"
 
-#include "dht22.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
-#include "soil_moisture_adc.h"
 #include "task_settings.h"
 
 #define SENSOR_POLL_INTERVAL_MS 2000
+#define SENSOR_DEFAULT_HUMIDITY 0.0f
+#define SENSOR_DEFAULT_TEMPERATURE 0.0f
+#define SENSOR_DEFAULT_SOIL_MOISTURE 50.0f
 
 static const char *TAG = "sensor_cache";
 
 static StaticSemaphore_t s_snapshot_mutex_buffer;
 static SemaphoreHandle_t s_snapshot_mutex = NULL;
 static sensor_snapshot_t s_snapshot = {
-    .humidity = -1.0f,
-    .temperature = -1000.0f,
-    .soilMoisture = 0.0f,
-    .valid = false,
+    .humidity = SENSOR_DEFAULT_HUMIDITY,
+    .temperature = SENSOR_DEFAULT_TEMPERATURE,
+    .soilMoisture = SENSOR_DEFAULT_SOIL_MOISTURE,
+    .valid = true,
     .timestamp_us = 0,
 };
 static bool s_started = false;
@@ -30,35 +31,14 @@ static void sensor_cache_task(void *pvParameters)
 
     while (1)
     {
-        float humidity = 0.0f;
-        float temperature = 0.0f;
-        float soil_moisture = 0.0f;
-        bool ok = dht22_read(&humidity, &temperature);
-        esp_err_t soil_err = soil_moisture_adc_read_percent(&soil_moisture);
-
-        if (ok)
+        if (xSemaphoreTake(s_snapshot_mutex, portMAX_DELAY) == pdTRUE)
         {
-            if (xSemaphoreTake(s_snapshot_mutex, portMAX_DELAY) == pdTRUE)
-            {
-                s_snapshot.humidity = humidity;
-                s_snapshot.temperature = temperature;
-                if (soil_err == ESP_OK)
-                {
-                    s_snapshot.soilMoisture = soil_moisture;
-                }
-                s_snapshot.valid = true;
-                s_snapshot.timestamp_us = esp_timer_get_time();
-                xSemaphoreGive(s_snapshot_mutex);
-            }
-        }
-        else
-        {
-            ESP_LOGW(TAG, "DHT22 read failed; keeping previous cached reading");
-        }
-
-        if (soil_err != ESP_OK)
-        {
-            ESP_LOGW(TAG, "Soil moisture read failed: %s", esp_err_to_name(soil_err));
+            s_snapshot.humidity = SENSOR_DEFAULT_HUMIDITY;
+            s_snapshot.temperature = SENSOR_DEFAULT_TEMPERATURE;
+            s_snapshot.soilMoisture = SENSOR_DEFAULT_SOIL_MOISTURE;
+            s_snapshot.valid = true;
+            s_snapshot.timestamp_us = esp_timer_get_time();
+            xSemaphoreGive(s_snapshot_mutex);
         }
 
         vTaskDelay(pdMS_TO_TICKS(SENSOR_POLL_INTERVAL_MS));
@@ -76,13 +56,6 @@ esp_err_t sensor_cache_start(void)
     if (s_snapshot_mutex == NULL)
     {
         return ESP_FAIL;
-    }
-
-    esp_err_t soil_init_err = soil_moisture_adc_init();
-    if (soil_init_err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to init soil moisture ADC: %s", esp_err_to_name(soil_init_err));
-        return soil_init_err;
     }
 
     BaseType_t created = xTaskCreatePinnedToCore(

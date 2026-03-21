@@ -843,11 +843,19 @@ WiFiConnectionInfo.prototype.getConnectInfo = function () {
   var requestURL = "/wifiConnectInfo.json";
 
   function payload(data) {
-    this.setConnectedAPName(data["ap"]);
-    this.setIPAddress(data["ip"]);
-    this.setNetmask(data["netmask"]);
-    this.setGateway(data["gw"]);
-    $(this.disconnectButton).show();
+    if (parseInt(data["wifi_connect_status"]) === 3) {
+      this.setConnectedAPName(data["ap"]);
+      this.setIPAddress(data["ip"]);
+      this.setNetmask(data["netmask"]);
+      this.setGateway(data["gw"]);
+      $(this.disconnectButton).show();
+    } else {
+      this.setConnectedAPName("Not Connected");
+      this.setIPAddress("0.0.0.0");
+      this.setNetmask("0.0.0.0");
+      this.setGateway("0.0.0.0");
+      this.hideDisconnectButton();
+    }
   }
 
   fetch(requestURL)
@@ -1028,10 +1036,12 @@ function getESPServerStatus(
     }
 
     if (parseInt(data["wifi-connect-status"]) == 3) {
-      if (isEmpty(wifiConnectionInfo.getConnectedAPName())) {
-        wifiConnectionInfo.getConnectInfo();
-      }
+      wifiConnectionInfo.getConnectInfo();
     } else {
+      wifiConnectionInfo.setConnectedAPName("Not Connected");
+      wifiConnectionInfo.setIPAddress("0.0.0.0");
+      wifiConnectionInfo.setNetmask("0.0.0.0");
+      wifiConnectionInfo.setGateway("0.0.0.0");
       wifiConnectionInfo.hideDisconnectButton();
     }
   });

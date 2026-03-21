@@ -1,4 +1,4 @@
-idf_component_register(SRCS "actuators/relay.c" "actuators/irrigation_ctrl.c" "http/http_server_monitor.c" "sensors/sensor_cache.c" "sensors/soil_moisture_adc.c" "main.c"
+idf_component_register(SRCS "actuators/relay.c" "actuators/irrigation_ctrl.c" "http/http_server_monitor.c" "sensors/sensor_cache.c" "main.c"
                              "storage/app_nvs.c"
                              "storage/water_config.c"
                              "http/http_server.c"
@@ -10,6 +10,5 @@ idf_component_register(SRCS "actuators/relay.c" "actuators/irrigation_ctrl.c" "h
                              "network/wifi_app.c"
                              "network/time_sync.c"
                              "actuators/rgb-led.c"
-                             "sensors/dht22.c"
                     INCLUDE_DIRS "." "http" "network" "storage" "sensors" "actuators"
                     EMBED_FILES "webpage/app.css" "webpage/app.js" "webpage/favicon.ico" "webpage/index.html" "webpage/jquery-3.3.1.min.js")
