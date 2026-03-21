@@ -7,7 +7,8 @@
  * @brief POSTs sensor readings as JSON to the web-server.
  *
  * Target URL: http://WIFI_SERVER_HOST/sensor-update
- * Body: {"temperature":<val>,"humidity":<val>,"soil_moisture":<val>}
+ * Body: {"device_id":"<unique-id>","temperature":<val>,"humidity":<val>,"soil_moisture":<val>}
+ * Header: X-Device-Id: <unique-id>
  *
  * @return ESP_OK on HTTP 2xx response, ESP_FAIL otherwise.
  */
