@@ -22,7 +22,9 @@ static bool s_sta_connect_requested_from_http = false;
 #define SENSOR_DATA_FLASH_DURATION_MS 150
 
 static rgb_led_color_id_t s_current_led_color = RGB_LED_COLOR_BLUE;
-static esp_timer_handle_t s_led_restore_timer = NULL;
+static rgb_led_color_id_t s_status_led_color  = RGB_LED_COLOR_BLUE;
+static bool               s_last_relay_state   = false;
+static esp_timer_handle_t s_led_restore_timer  = NULL;
 
 static void led_restore_timer_cb(void *arg)
 {
@@ -31,6 +33,7 @@ static void led_restore_timer_cb(void *arg)
 
 static void set_led_status(rgb_led_color_id_t color)
 {
+  s_status_led_color  = color;
   s_current_led_color = color;
   if (s_led_restore_timer != NULL)
   {
@@ -71,8 +74,8 @@ static void main_task(void *pvParameters)
   }
 
   const esp_timer_create_args_t led_restore_timer_args = {
-    .callback = led_restore_timer_cb,
-    .name = "led_restore",
+      .callback = led_restore_timer_cb,
+      .name = "led_restore",
   };
   esp_timer_create(&led_restore_timer_args, &s_led_restore_timer);
 
@@ -87,7 +90,7 @@ static void main_task(void *pvParameters)
     app_event_t app_event;
     if (xQueueReceive(app_queue_handle, &app_event, pdMS_TO_TICKS(1000)) == pdPASS)
     {
-      printf("main_task received event id: %lu\n", (unsigned long)app_event.event_id);
+      // printf("main_task received event id: %lu\n", (unsigned long)app_event.event_id);
       switch (app_event.event_id)
       {
       case WIFI_APP_MSG_START_HTTP_SERVER:
@@ -149,6 +152,25 @@ static void main_task(void *pvParameters)
 
       default:
         break;
+      }
+    }
+
+    // Relay state polling — update LED to YELLOW while water is on.
+    bool relay_on = relay_get_state();
+    if (relay_on != s_last_relay_state)
+    {
+      s_last_relay_state = relay_on;
+      if (relay_on)
+      {
+        ESP_LOGI(TAG, "Relay ON — LED YELLOW");
+        s_current_led_color = RGB_LED_COLOR_YELLOW;
+        rgb_led_set_color_by_id(RGB_LED_COLOR_YELLOW);
+      }
+      else
+      {
+        ESP_LOGI(TAG, "Relay OFF — restoring LED");
+        s_current_led_color = s_status_led_color;
+        rgb_led_set_color_by_id(s_status_led_color);
       }
     }
 
