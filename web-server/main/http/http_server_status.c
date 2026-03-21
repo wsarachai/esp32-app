@@ -137,7 +137,7 @@ static esp_err_t http_server_sensor_update_handler(httpd_req_t *req)
     return ESP_FAIL;
   }
 
-  esp_err_t err = sensor_cache_update_snapshot(temperature, humidity, soil_moisture);
+  esp_err_t err = sensor_cache_update_snapshot(device_id, temperature, humidity, soil_moisture);
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to update sensor cache: %s", esp_err_to_name(err));

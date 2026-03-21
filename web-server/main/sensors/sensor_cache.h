@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include "esp_err.h"
 
+/** Maximum number of unique sensor nodes tracked simultaneously. */
+#define SENSOR_CACHE_MAX_DEVICES 8
+
 typedef struct
 {
     float humidity;
@@ -15,7 +18,21 @@ typedef struct
 } sensor_snapshot_t;
 
 esp_err_t sensor_cache_start(void);
+
+/**
+ * Returns the average of all registered device snapshots.
+ * Falls back to built-in defaults when no devices have reported yet.
+ */
 bool sensor_cache_get_snapshot(sensor_snapshot_t *snapshot);
-esp_err_t sensor_cache_update_snapshot(float temperature, float humidity, float soil_moisture);
+
+/**
+ * Update (or register) a device's sensor reading.
+ * @param device_id  Unique string identifier for the reporting node.
+ *                   Must not be NULL or empty.
+ */
+esp_err_t sensor_cache_update_snapshot(const char *device_id,
+                                       float temperature,
+                                       float humidity,
+                                       float soil_moisture);
 
 #endif // SENSOR_CACHE_H_
