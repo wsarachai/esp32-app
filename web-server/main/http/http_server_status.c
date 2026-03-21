@@ -8,6 +8,7 @@
 #include "relay.h"
 #include "sensor_cache.h"
 #include "time_sync.h"
+#include "http_server_monitor.h"
 #include "wifi_app.h"
 #include "water_config.h"
 
@@ -205,15 +206,18 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   const char *relay_status = relay_get_state() ? "ON" : "OFF";
   uint8_t wifi_connect_status = wifi_app_get_sta_connect_status();
   water_config_t water_cfg = water_config_get();
+  bool sensor_data_available = http_server_monitor_is_sensor_data_available();
+  uint8_t online_node_count = http_server_monitor_online_node_count();
+  uint8_t registered_node_count = http_server_monitor_registered_node_count();
 
   char time_buf[32];
   time_sync_get_local_time(time_buf, sizeof(time_buf));
 
-  char json_response[352];
+    char json_response[480];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\"}",
+      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u}",
       time_buf,
       snapshot.temperature,
       snapshot.humidity,
@@ -222,7 +226,10 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
       (unsigned int)water_cfg.max_moisture_level,
       (unsigned int)water_cfg.duration_minutes,
       (unsigned int)wifi_connect_status,
-      relay_status);
+      relay_status,
+      sensor_data_available ? "true" : "false",
+      (unsigned int)online_node_count,
+      (unsigned int)registered_node_count);
 
   if (written < 0 || written >= (int)sizeof(json_response))
   {

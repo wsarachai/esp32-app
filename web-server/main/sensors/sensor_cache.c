@@ -146,6 +146,51 @@ bool sensor_cache_get_snapshot(sensor_snapshot_t *snapshot)
     return true;
 }
 
+bool sensor_cache_get_stats(sensor_cache_stats_t *stats, uint32_t offline_timeout_ms)
+{
+    if (stats == NULL || s_mutex == NULL)
+    {
+        return false;
+    }
+
+    if (xSemaphoreTake(s_mutex, pdMS_TO_TICKS(50)) != pdTRUE)
+    {
+        return false;
+    }
+
+    int64_t now_us = esp_timer_get_time();
+    int64_t offline_timeout_us = ((int64_t)offline_timeout_ms) * 1000;
+    uint8_t registered = 0;
+    uint8_t online = 0;
+    int64_t newest_ts = 0;
+
+    for (int i = 0; i < SENSOR_CACHE_MAX_DEVICES; i++)
+    {
+        if (!s_device_table[i].valid)
+        {
+            continue;
+        }
+
+        registered++;
+        if (s_device_table[i].timestamp_us > newest_ts)
+        {
+            newest_ts = s_device_table[i].timestamp_us;
+        }
+
+        if (offline_timeout_us <= 0 || (now_us - s_device_table[i].timestamp_us) <= offline_timeout_us)
+        {
+            online++;
+        }
+    }
+
+    stats->registered_devices = registered;
+    stats->online_devices = online;
+    stats->newest_timestamp_us = newest_ts;
+
+    xSemaphoreGive(s_mutex);
+    return true;
+}
+
 /* ------------------------------------------------------------------ */
 
 esp_err_t sensor_cache_update_snapshot(const char *device_id,

@@ -17,6 +17,13 @@ typedef struct
     int64_t timestamp_us;
 } sensor_snapshot_t;
 
+typedef struct
+{
+    uint8_t registered_devices;
+    uint8_t online_devices;
+    int64_t newest_timestamp_us;
+} sensor_cache_stats_t;
+
 esp_err_t sensor_cache_start(void);
 
 /**
@@ -34,5 +41,7 @@ esp_err_t sensor_cache_update_snapshot(const char *device_id,
                                        float temperature,
                                        float humidity,
                                        float soil_moisture);
+
+bool sensor_cache_get_stats(sensor_cache_stats_t *stats, uint32_t offline_timeout_ms);
 
 #endif // SENSOR_CACHE_H_

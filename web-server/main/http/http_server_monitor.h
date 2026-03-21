@@ -2,6 +2,7 @@
 #define HTTP_SERVER_MONITOR_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -26,5 +27,9 @@ extern QueueHandle_t http_server_monitor_queue_handle;
 esp_err_t http_server_monitor_start(void);
 
 BaseType_t http_server_monitor_send_message(http_server_monitor_msg_id_t eventID);
+
+bool http_server_monitor_is_sensor_data_available(void);
+uint8_t http_server_monitor_online_node_count(void);
+uint8_t http_server_monitor_registered_node_count(void);
 
 #endif // HTTP_SERVER_MONITOR_H_

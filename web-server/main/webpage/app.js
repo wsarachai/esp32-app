@@ -158,6 +158,12 @@ GeneralInfo.prototype.createHeader = function () {
 GeneralInfo.prototype.createSensorInfo = function () {
   const sensorInfo = createElement("div", { class: "sensor-container" });
 
+  this.sensorAvailabilityNotice = createElement("div", {
+    id: "sensor-availability-notice",
+    class: "data",
+  });
+  this.sensorAvailabilityNotice.innerHTML = "";
+
   // Temperature
   const temperatureInfo = createElement("div", {
     class: "sensor-box temperature",
@@ -201,6 +207,7 @@ GeneralInfo.prototype.createSensorInfo = function () {
   sensorInfo.appendChild(temperatureInfo);
   sensorInfo.appendChild(humidityInfo);
   sensorInfo.appendChild(soilMoistureInfo);
+  sensorInfo.appendChild(this.sensorAvailabilityNotice);
 
   this.appendChild(sensorInfo);
 };
@@ -241,6 +248,20 @@ GeneralInfo.prototype.setSoilMoistureReading = function (soilMoisture) {
   this.soilMoistureReading.innerHTML =
     parseFloat(soilMoisture).toFixed(2) + " %";
   this.soilMoistureBar.setProgress(soilMoisture);
+};
+
+GeneralInfo.prototype.setNoDataState = function (onlineCount, registeredCount) {
+  this.temperatureReading.innerHTML = "No data";
+  this.humidityReading.innerHTML = "No data";
+  this.soilMoistureReading.innerHTML = "No data";
+  this.humidityBar.setProgress(0);
+  this.soilMoistureBar.setProgress(0);
+  this.sensorAvailabilityNotice.innerHTML =
+    "ยังไม่มีข้อมูลจาก client node (ออนไลน์ " + onlineCount + "/" + registeredCount + ")";
+};
+
+GeneralInfo.prototype.setDataAvailableState = function () {
+  this.sensorAvailabilityNotice.innerHTML = "";
 };
 
 GeneralInfo.prototype.updateStatus = function (data) {
@@ -1023,9 +1044,18 @@ function getESPServerStatus(
 ) {
   $.getJSON("/ESPServerStatus.json", function (data) {
     generalInfo.setCurrentTime(data["time"]);
-    generalInfo.setTemperatureReading(data["temp"]);
-    generalInfo.setHumidityReading(data["humidity"]);
-    generalInfo.setSoilMoistureReading(data["soil-moisture"]);
+    const sensorDataAvailable = !!data["sensor-data-available"];
+    if (sensorDataAvailable) {
+      generalInfo.setDataAvailableState();
+      generalInfo.setTemperatureReading(data["temp"]);
+      generalInfo.setHumidityReading(data["humidity"]);
+      generalInfo.setSoilMoistureReading(data["soil-moisture"]);
+    } else {
+      generalInfo.setNoDataState(
+        parseInt(data["online-node-count"] || 0),
+        parseInt(data["registered-node-count"] || 0)
+      );
+    }
 
     systemConfig.setMinMoistureLevel(data["min-moiture-level"]);
     systemConfig.setMaxMoistureLevel(data["max-moiture-level"]);
