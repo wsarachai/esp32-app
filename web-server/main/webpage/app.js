@@ -1035,6 +1035,28 @@ FirmwareUpdate.prototype.getUpdateStatus = function () {
 // Main Program
 ////////////////////////////////////////
 let mainContainer = null;
+const SERVER_UNAVAILABLE_TIMEOUT_MS = 15000;
+let serverLastSeenAtMs = Date.now();
+
+function setWebDisabled(disabled) {
+  if (disabled) {
+    document.body.classList.add("server-unavailable");
+  } else {
+    document.body.classList.remove("server-unavailable");
+  }
+}
+
+function markServerAvailable() {
+  serverLastSeenAtMs = Date.now();
+  setWebDisabled(false);
+}
+
+function checkServerAvailabilityTimeout() {
+  const elapsedMs = Date.now() - serverLastSeenAtMs;
+  if (elapsedMs >= SERVER_UNAVAILABLE_TIMEOUT_MS) {
+    setWebDisabled(true);
+  }
+}
 
 function getESPServerStatus(
   generalInfo,
@@ -1042,7 +1064,9 @@ function getESPServerStatus(
   relayControl,
   wifiConnectionInfo
 ) {
-  $.getJSON("/ESPServerStatus.json", function (data) {
+  $.getJSON("/ESPServerStatus.json")
+    .done(function (data) {
+    markServerAvailable();
     generalInfo.setCurrentTime(data["time"]);
     const sensorDataAvailable = !!data["sensor-data-available"];
     if (sensorDataAvailable) {
@@ -1074,10 +1098,21 @@ function getESPServerStatus(
       wifiConnectionInfo.setGateway("0.0.0.0");
       wifiConnectionInfo.hideDisconnectButton();
     }
-  });
+    })
+    .fail(function () {
+      // Watchdog timer handles disable state after timeout window.
+      console.warn("ESPServerStatus request failed");
+    });
 }
 
 $(document).ready(function () {
+  const offlineOverlay = createElement(
+    "div",
+    { id: "server-unavailable-overlay" },
+    "Server unavailable - waiting for reconnection"
+  );
+  document.body.appendChild(offlineOverlay);
+
   mainContainer = document.getElementById("main-container");
 
   const generalInfo = new GeneralInfo();
@@ -1110,4 +1145,5 @@ $(document).ready(function () {
   );
   getESPServerStatusBind();
   setInterval(getESPServerStatusBind, 5000);
+  setInterval(checkServerAvailabilityTimeout, 1000);
 });

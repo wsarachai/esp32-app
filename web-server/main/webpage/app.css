@@ -7,6 +7,38 @@ body {
     padding: 0;
 }
 
+body.server-unavailable {
+    overflow: hidden;
+}
+
+body.server-unavailable header,
+body.server-unavailable main,
+body.server-unavailable .app-footer {
+    filter: grayscale(1);
+    opacity: 0.35;
+    pointer-events: none;
+    user-select: none;
+}
+
+#server-unavailable-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    background: rgba(26, 33, 43, 0.45);
+    color: #ffffff;
+    font-size: 1.25em;
+    font-weight: 700;
+    z-index: 1000;
+}
+
+body.server-unavailable #server-unavailable-overlay {
+    display: flex;
+}
+
 /* Header styling */
 header {
     background-color: #1d3557;
