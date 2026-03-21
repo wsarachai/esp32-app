@@ -407,20 +407,60 @@ RelayControl.prototype.createBodyInfo = function () {
   divBody.appendChild(this.relayCheckbox);
   divBody.appendChild(lblStatus);
 
+  this.relayIndicator = createElement("div", {
+    id: "water-switch-indicator",
+    class: "water-switch-indicator is-off",
+  });
+  this.relayIndicatorIcon = createElement("div", {
+    class: "water-switch-icon",
+  });
+  const indicatorText = createElement("div", { class: "water-switch-text" });
+  this.relayIndicatorTitle = createElement("div", {
+    class: "water-switch-title",
+  }, "วาล์วน้ำ");
+  this.relayIndicatorState = createElement("div", {
+    class: "water-switch-state",
+  }, "ปิดอยู่");
+  this.relayIndicatorMode = createElement("div", {
+    class: "water-switch-mode",
+  }, "โหมดอัตโนมัติ");
+  indicatorText.appendChild(this.relayIndicatorTitle);
+  indicatorText.appendChild(this.relayIndicatorState);
+  indicatorText.appendChild(this.relayIndicatorMode);
+  this.relayIndicator.appendChild(this.relayIndicatorIcon);
+  this.relayIndicator.appendChild(indicatorText);
+
   this.relayButton = createElement("button", { id: "relay-button" }, RELAY_ON);
 
   this.relayCheckbox.addEventListener("click", this.relayCheckbox_Click.bind(this));
   this.relayButton.addEventListener("click", this.toggleRelayOnOff.bind(this));
 
   this.appendChild(divBody);
+  this.appendChild(this.relayIndicator);
   this.appendChild(this.relayButton);
+};
+
+RelayControl.prototype.setControlMode = function (isManual) {
+  this.relayIndicatorMode.innerHTML = isManual ? "โหมดกำหนดเอง" : "โหมดอัตโนมัติ";
+};
+
+RelayControl.prototype.setRelayIndicatorStatus = function (status) {
+  if (status && status === "ON") {
+    this.relayIndicator.className = "water-switch-indicator is-on";
+    this.relayIndicatorState.innerHTML = "กำลังจ่ายน้ำ";
+  } else {
+    this.relayIndicator.className = "water-switch-indicator is-off";
+    this.relayIndicatorState.innerHTML = "ปิดอยู่";
+  }
 };
 
 RelayControl.prototype.relayCheckbox_Click = function () {
   const relayButton = $(this.relayButton);
   if (this.relayCheckbox.checked) {
+    this.setControlMode(true);
     relayButton.fadeIn("fast");
   } else {
+    this.setControlMode(false);
     relayButton.fadeOut("fast");
     // Return relay to automatic (irrigation_ctrl) mode.
     $.ajax({
@@ -457,6 +497,7 @@ RelayControl.prototype.toggleRelayOnOff = function () {
 
 RelayControl.prototype.setRelayButtonStatus = function (status) {
   const relayButton = $(this.relayButton);
+  this.setRelayIndicatorStatus(status);
   if (status && status === "ON") {
     relayButton.html(RELAY_ON);
     relayButton.css("background", "#ff6b6b");
@@ -482,7 +523,12 @@ RelayControl.prototype.getRelayStatus = function () {
       // (e.g. the page was reloaded while the user had manual control).
       if (data["manual_override"]) {
         this.relayCheckbox.checked = true;
+        this.setControlMode(true);
         $(this.relayButton).show();
+      } else {
+        this.relayCheckbox.checked = false;
+        this.setControlMode(false);
+        $(this.relayButton).hide();
       }
     })
     .catch((error) => console.error("Failed to get relay status:", error));

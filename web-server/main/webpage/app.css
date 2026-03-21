@@ -224,6 +224,81 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
     display: inline-block;
 }
 
+.water-switch-indicator {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #d7deea;
+    background: linear-gradient(135deg, #f7fbff 0%, #eef4f8 100%);
+    margin: 12px 0 10px;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.water-switch-indicator.is-on {
+    background: linear-gradient(135deg, #e7f7ff 0%, #d7f0ff 100%);
+    border-color: #67b7dc;
+    box-shadow: 0 0 0 3px rgba(103, 183, 220, 0.15);
+}
+
+.water-switch-indicator.is-off {
+    background: linear-gradient(135deg, #f7f8fb 0%, #edf1f5 100%);
+    border-color: #d7deea;
+}
+
+.water-switch-icon {
+    width: 28px;
+    height: 36px;
+    border-radius: 50% 50% 55% 55% / 60% 60% 40% 40%;
+    transform: rotate(45deg);
+    background: #90a4b8;
+    flex: 0 0 auto;
+    position: relative;
+    margin-left: 6px;
+}
+
+.water-switch-icon::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    top: 6px;
+    left: 7px;
+}
+
+.water-switch-indicator.is-on .water-switch-icon {
+    background: #1696d2;
+    box-shadow: 0 0 18px rgba(22, 150, 210, 0.45);
+}
+
+.water-switch-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.water-switch-title {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #5f6b7a;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.water-switch-state {
+    font-size: 1.15em;
+    font-weight: bold;
+    color: #1d3557;
+}
+
+.water-switch-mode {
+    font-size: 0.95em;
+    color: #5f6b7a;
+}
+
 /* Responsive media queries */
 @media (max-width: 600px) {
     h1 {
