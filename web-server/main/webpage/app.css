@@ -27,6 +27,29 @@ main {
     padding: 0 10px;
 }
 
+.app-footer {
+    margin-top: 28px;
+    background: #1d3557;
+    color: #eaf2fb;
+    border-top: 4px solid #457b9d;
+}
+
+.app-footer-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px 20px 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.95em;
+}
+
+.app-footer-copy,
+.app-footer-version {
+    margin: 0;
+}
+
 section {
     background: #fff;
     margin: 10px 0;
@@ -315,6 +338,10 @@ input[type="text"], input[type="password"], input[type="number"], input[type="fi
     }
     .sensor-box {
         margin: 10px 0;
+    }
+    .app-footer-content {
+        flex-direction: column;
+        gap: 8px;
     }
     button, input[type="button"] {
         padding: 8px 10px;
