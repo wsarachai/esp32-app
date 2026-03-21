@@ -23,6 +23,7 @@
 
 static const char *TAG = "relay";
 static bool relay_current_state = false;
+static bool relay_manual_override = false;
 
 esp_err_t relay_set(bool enabled)
 {
@@ -40,6 +41,17 @@ esp_err_t relay_set(bool enabled)
 bool relay_get_state(void)
 {
 	return relay_current_state;
+}
+
+void relay_set_manual_override(bool active)
+{
+	relay_manual_override = active;
+	ESP_LOGI(TAG, "Manual override: %s", active ? "ON" : "OFF");
+}
+
+bool relay_is_manual_override(void)
+{
+	return relay_manual_override;
 }
 
 void relay_init(void)

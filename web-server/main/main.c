@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "app_nvs.h"
 #include "http_server.h"
+#include "irrigation_ctrl.h"
 #include "rgb-led.h"
 #include "relay.h"
 #include "sensor_cache.h"
@@ -105,10 +106,19 @@ static void main_task(void *pvParameters)
 
 void app_main(void)
 {
+  // Suppress verbose per-pin config logs from the ESP-IDF GPIO driver.
+  esp_log_level_set("gpio", ESP_LOG_WARN);
+
   esp_err_t sensor_cache_status = sensor_cache_start();
   if (sensor_cache_status != ESP_OK)
   {
     ESP_LOGE(TAG, "Sensor cache task start failed: %s", esp_err_to_name(sensor_cache_status));
+  }
+
+  esp_err_t irrigation_status = irrigation_ctrl_start();
+  if (irrigation_status != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Irrigation control task start failed: %s", esp_err_to_name(irrigation_status));
   }
 
   xTaskCreatePinnedToCore(main_task,

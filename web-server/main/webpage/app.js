@@ -422,6 +422,15 @@ RelayControl.prototype.relayCheckbox_Click = function () {
     relayButton.fadeIn("fast");
   } else {
     relayButton.fadeOut("fast");
+    // Return relay to automatic (irrigation_ctrl) mode.
+    $.ajax({
+      url: "/relayControl.json",
+      dataType: "json",
+      method: "POST",
+      cache: false,
+      headers: { "relay-control": "auto" },
+      data: { timestamp: Date.now() },
+    });
   }
 };
 
@@ -468,6 +477,12 @@ RelayControl.prototype.getRelayStatus = function () {
     .then((data) => {
       if (data["relay_status"]) {
         this.setRelayButtonStatus(data["relay_status"]);
+      }
+      // Restore checkbox state when manual override is already active
+      // (e.g. the page was reloaded while the user had manual control).
+      if (data["manual_override"]) {
+        this.relayCheckbox.checked = true;
+        $(this.relayButton).show();
       }
     })
     .catch((error) => console.error("Failed to get relay status:", error));
