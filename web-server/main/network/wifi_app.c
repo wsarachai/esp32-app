@@ -28,6 +28,20 @@ static volatile uint8_t s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
  */
 static EventGroupHandle_t wifi_app_event_group;
 
+#if WIFI_APP_ENABLE_STACK_MARGIN_LOG
+static void log_stack_margin(const char *stage)
+{
+  UBaseType_t high_water_words = uxTaskGetStackHighWaterMark(NULL);
+  ESP_LOGI(TAG, "Stack margin at %s: %lu words (%lu bytes)",
+           stage,
+           (unsigned long)high_water_words,
+           (unsigned long)(high_water_words * sizeof(StackType_t)));
+}
+#define WIFI_APP_LOG_STACK_MARGIN(stage) log_stack_margin(stage)
+#else
+#define WIFI_APP_LOG_STACK_MARGIN(stage) ((void)0)
+#endif
+
 uint8_t wifi_app_get_sta_connect_status(void)
 {
   return s_sta_connect_status;
@@ -209,12 +223,17 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
 
 static void wifi_app_task(void *pvParameters)
 {
+  (void)pvParameters;
+
+  WIFI_APP_LOG_STACK_MARGIN("task start");
+
   // Create the WiFi application event group
   wifi_app_event_group = xEventGroupCreate();
   xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STARTED_BIT);
 
   // 1. Initialise NVS (required by the WiFi driver)
   ESP_ERROR_CHECK(app_nvs_init());
+  WIFI_APP_LOG_STACK_MARGIN("after app_nvs_init");
 
   // 2. Initialise TCP/IP stack
   ESP_ERROR_CHECK(esp_netif_init());
@@ -240,6 +259,7 @@ static void wifi_app_task(void *pvParameters)
   // 6. Initialise the WiFi driver with default configuration
   s_wifi_init_config = (wifi_init_config_t)WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&s_wifi_init_config));
+  WIFI_APP_LOG_STACK_MARGIN("after esp_wifi_init");
 
   // 7. Register event handlers for WiFi and IP events
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
@@ -273,6 +293,7 @@ static void wifi_app_task(void *pvParameters)
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &s_ap_config));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_sta_config));
   ESP_ERROR_CHECK(esp_wifi_start());
+  WIFI_APP_LOG_STACK_MARGIN("after esp_wifi_start");
 
   ESP_LOGI(TAG, "WiFi AP ready. Connect to SSID \"%s\" with password \"%s\"",
            WIFI_AP_SSID, WIFI_AP_PASSWORD);
@@ -316,6 +337,8 @@ static void wifi_app_task(void *pvParameters)
 
   // Start HTTP server only after TCP/IP stack and WiFi driver are up.
   app_send_message(WIFI_APP_MSG_START_HTTP_SERVER);
+
+  WIFI_APP_LOG_STACK_MARGIN("before task delete");
 
   // Initialisation is complete; the WiFi driver runs autonomously.
   vTaskDelete(NULL);
