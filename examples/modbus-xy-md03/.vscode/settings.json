@@ -4,9 +4,9 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=c:\\Users\\ASUS\\workspaces\\esp32-idf\\esp-idf-iot\\examples\\DHT22\\DHT22\\build"
+    "--compile-commands-dir=c:\\Users\\watch\\workspaces\\esp32-app\\examples\\modbus-xy-md03\\build"
   ],
   "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
-  "idf.flashType": "UART",
-  "idf.portWin": "COM5"
+  "idf.portWin": "COM5",
+  "idf.flashType": "UART"
 }
