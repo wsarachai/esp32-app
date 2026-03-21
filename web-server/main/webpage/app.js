@@ -448,7 +448,7 @@ RelayControl.prototype.setRelayButtonStatus = function (status) {
 
 RelayControl.prototype.getRelayStatus = function () {
   var requestURL = "/relayStatus.json";
-  
+
   fetch(requestURL, {
     method: "GET",
     cache: "no-cache",
@@ -627,6 +627,8 @@ WiFiConnection.prototype.getWifiConnectStatus = function () {
     } else if (data.wifi_connect_status == 3) {
       this.connectionStatus.innerHTML =
         "<h4 class='gr'>Connection Success!</h4>";
+      $(this.ssidInput).val("");
+      $(this.passwordInput).val("");
       this.stopWifiConnectStatusInterval();
       this.getConnectInfo();
 

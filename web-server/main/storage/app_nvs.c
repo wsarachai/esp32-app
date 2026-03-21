@@ -71,7 +71,7 @@ esp_err_t app_nvs_load_sta_creds(void)
   esp_err_t ret = nvs_open("wifi", NVS_READONLY, &nvs_handle);
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
-    return ESP_OK;
+    return ESP_ERR_NOT_FOUND;
   }
   if (ret != ESP_OK)
   {
@@ -82,7 +82,7 @@ esp_err_t app_nvs_load_sta_creds(void)
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
     nvs_close(nvs_handle);
-    return ESP_OK;
+    return ESP_ERR_NOT_FOUND;
   }
   if (ret != ESP_OK)
   {
@@ -94,7 +94,7 @@ esp_err_t app_nvs_load_sta_creds(void)
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
     nvs_close(nvs_handle);
-    return ESP_OK;
+    return ESP_ERR_NOT_FOUND;
   }
   if (ret != ESP_OK)
   {

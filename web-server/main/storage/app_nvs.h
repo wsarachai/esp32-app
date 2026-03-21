@@ -13,6 +13,7 @@ esp_err_t app_nvs_erase(void);
 esp_err_t app_nvs_save_sta_creds(void);
 
 // Loads STA credentials from NVS and applies them to the WiFi STA config.
+// Returns ESP_ERR_NOT_FOUND when credentials are not available.
 esp_err_t app_nvs_load_sta_creds(void);
 
 #endif // APP_NVS_H

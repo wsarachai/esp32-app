@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "relay.h"
 #include "sensor_cache.h"
+#include "wifi_app.h"
 
 static const char TAG[] = "http_server_status";
 
@@ -25,15 +26,17 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   }
 
   const char *relay_status = relay_get_state() ? "ON" : "OFF";
+  uint8_t wifi_connect_status = wifi_app_get_sta_connect_status();
 
   char json_response[320];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":0,\"relay-status\":\"%s\"}",
+      "{\"time\":\"--:--:--\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":0,\"max-moiture-level\":0,\"duration\":0,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\"}",
       snapshot.temperature,
       snapshot.humidity,
       snapshot.soilMoisture,
+      (unsigned int)wifi_connect_status,
       relay_status);
 
   if (written < 0 || written >= (int)sizeof(json_response))

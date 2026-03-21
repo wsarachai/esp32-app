@@ -14,6 +14,7 @@
 
 // Tag used for ESP serial console messages
 static const char TAG[] = "main_app";
+static bool s_sta_connect_requested_from_http = false;
 
 // Queue handle used to manipulate the main queue of events.
 QueueHandle_t app_queue_handle;
@@ -68,15 +69,25 @@ static void main_task(void *pvParameters)
       case WIFI_APP_MSG_STA_CONNECTED_GOT_IP:
         ESP_LOGI(TAG, "WIFI_APP_MSG_STA_CONNECTED_GOT_IP");
 
-        app_nvs_save_sta_creds();
+        if (s_sta_connect_requested_from_http)
+        {
+          app_nvs_save_sta_creds();
+          s_sta_connect_requested_from_http = false;
+        }
+        else
+        {
+          ESP_LOGI(TAG, "Skipping credential save: connection was not initiated from HTTP request");
+        }
 
         break;
 
       case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:
         ESP_LOGI(TAG, "WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER");
 
+        s_sta_connect_requested_from_http = true;
         if (wifi_app_connect_sta() != ESP_OK)
         {
+          s_sta_connect_requested_from_http = false;
           ESP_LOGE(TAG, "Failed to start STA connection from HTTP server event");
         }
 

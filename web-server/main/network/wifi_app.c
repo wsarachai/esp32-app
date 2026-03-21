@@ -271,8 +271,6 @@ static void wifi_app_task(void *pvParameters)
       },
   };
 
-  ESP_ERROR_CHECK(wifi_app_set_sta_creds(WIFI_AP_SSID, WIFI_AP_PASSWORD));
-
   // 10. Set bandwidth, mode (APSTA), apply config, and start
   ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
@@ -283,6 +281,42 @@ static void wifi_app_task(void *pvParameters)
   ESP_LOGI(TAG, "WiFi AP ready. Connect to SSID \"%s\" with password \"%s\"",
            WIFI_AP_SSID, WIFI_AP_PASSWORD);
   ESP_LOGI(TAG, "AP IP: %s", WIFI_AP_IP);
+
+  // Auto-connect STA only after AP is confirmed up and saved credentials exist.
+  EventBits_t bits = xEventGroupWaitBits(
+      wifi_app_event_group,
+      WIFI_APP_AP_STARTED_BIT,
+      pdFALSE,
+      pdFALSE,
+      pdMS_TO_TICKS(5000));
+  if (bits & WIFI_APP_AP_STARTED_BIT)
+  {
+    esp_err_t load_ret = app_nvs_load_sta_creds();
+    if (load_ret == ESP_OK)
+    {
+      esp_err_t connect_ret = wifi_app_connect_sta();
+      if (connect_ret != ESP_OK)
+      {
+        ESP_LOGW(TAG, "Saved STA credentials found but auto-connect failed: %s", esp_err_to_name(connect_ret));
+      }
+      else
+      {
+        ESP_LOGI(TAG, "Saved STA credentials found; started auto-connect");
+      }
+    }
+    else if (load_ret == ESP_ERR_NOT_FOUND)
+    {
+      ESP_LOGI(TAG, "No saved STA credentials found; skipping auto-connect");
+    }
+    else
+    {
+      ESP_LOGW(TAG, "Failed to load saved STA credentials: %s", esp_err_to_name(load_ret));
+    }
+  }
+  else
+  {
+    ESP_LOGW(TAG, "AP start event timeout; skipping auto-connect attempt");
+  }
 
   // Start HTTP server only after TCP/IP stack and WiFi driver are up.
   app_send_message(WIFI_APP_MSG_START_HTTP_SERVER);
