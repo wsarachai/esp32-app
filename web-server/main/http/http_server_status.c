@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "esp_log.h"
 #include "relay.h"
@@ -11,6 +12,90 @@
 #include "water_config.h"
 
 static const char TAG[] = "http_server_status";
+
+#define SENSOR_UPDATE_MAX_BODY_LEN 160
+
+static bool parse_json_float_field(const char *json, const char *key, float *out)
+{
+  if (json == NULL || key == NULL || out == NULL)
+  {
+    return false;
+  }
+
+  char needle[48];
+  int needle_len = snprintf(needle, sizeof(needle), "\"%s\"", key);
+  if (needle_len <= 0 || needle_len >= (int)sizeof(needle))
+  {
+    return false;
+  }
+
+  const char *key_pos = strstr(json, needle);
+  if (key_pos == NULL)
+  {
+    return false;
+  }
+
+  const char *colon = strchr(key_pos, ':');
+  if (colon == NULL)
+  {
+    return false;
+  }
+
+  char *end_ptr = NULL;
+  float value = strtof(colon + 1, &end_ptr);
+  if (end_ptr == (colon + 1))
+  {
+    return false;
+  }
+
+  *out = value;
+  return true;
+}
+
+static esp_err_t http_server_sensor_update_handler(httpd_req_t *req)
+{
+  if (req->content_len <= 0 || req->content_len >= SENSOR_UPDATE_MAX_BODY_LEN)
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid sensor update payload size");
+    return ESP_FAIL;
+  }
+
+  char body[SENSOR_UPDATE_MAX_BODY_LEN];
+  int recv_len = httpd_req_recv(req, body, req->content_len);
+  if (recv_len <= 0)
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to read sensor update payload");
+    return ESP_FAIL;
+  }
+  body[recv_len] = '\0';
+
+  float temperature = 0.0f;
+  float humidity = 0.0f;
+  float soil_moisture = 0.0f;
+  bool ok = parse_json_float_field(body, "temperature", &temperature) &&
+            parse_json_float_field(body, "humidity", &humidity) &&
+            parse_json_float_field(body, "soil_moisture", &soil_moisture);
+  if (!ok)
+  {
+    ESP_LOGW(TAG, "Invalid sensor update JSON: %s", body);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid sensor fields");
+    return ESP_FAIL;
+  }
+
+  esp_err_t err = sensor_cache_update_snapshot(temperature, humidity, soil_moisture);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to update sensor cache: %s", esp_err_to_name(err));
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to update sensor cache");
+    return ESP_FAIL;
+  }
+
+  ESP_LOGI(TAG, "Sensor update received temp=%.2f humidity=%.2f soil=%.2f", temperature, humidity, soil_moisture);
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+}
 
 static esp_err_t parse_header_u16(httpd_req_t *req, const char *header_name, uint16_t *out)
 {
@@ -193,5 +278,17 @@ esp_err_t http_server_register_status_handlers(httpd_handle_t server)
       .handler = http_server_local_time_handler,
       .user_ctx = NULL,
   };
-  return httpd_register_uri_handler(server, &local_time);
+  err = httpd_register_uri_handler(server, &local_time);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t sensor_update = {
+      .uri = "/sensor-update",
+      .method = HTTP_POST,
+      .handler = http_server_sensor_update_handler,
+      .user_ctx = NULL,
+  };
+  return httpd_register_uri_handler(server, &sensor_update);
 }

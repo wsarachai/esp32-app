@@ -16,5 +16,6 @@ typedef struct
 
 esp_err_t sensor_cache_start(void);
 bool sensor_cache_get_snapshot(sensor_snapshot_t *snapshot);
+esp_err_t sensor_cache_update_snapshot(float temperature, float humidity, float soil_moisture);
 
 #endif // SENSOR_CACHE_H_

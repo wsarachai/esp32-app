@@ -4,8 +4,8 @@
 #include <stdbool.h>
 
 // Target AP credentials — must match the web-server Access Point settings.
-#define WIFI_STA_AP_SSID "MERLINZ"      //"MJU-SmartFarm-V1.0"
-#define WIFI_STA_AP_PASSWORD "iloveyou" //"password"
+#define WIFI_STA_AP_SSID "MJU-SmartFarm-V1.0"
+#define WIFI_STA_AP_PASSWORD "password"
 
 // Web-server IP (AP gateway) and HTTP port.
 #define WIFI_SERVER_HOST "192.168.0.1"

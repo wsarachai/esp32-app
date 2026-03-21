@@ -25,6 +25,15 @@ static sensor_snapshot_t s_snapshot = {
 };
 static bool s_started = false;
 
+static void sensor_cache_set_values_locked(float temperature, float humidity, float soil_moisture)
+{
+    s_snapshot.temperature = temperature;
+    s_snapshot.humidity = humidity;
+    s_snapshot.soilMoisture = soil_moisture;
+    s_snapshot.valid = true;
+    s_snapshot.timestamp_us = esp_timer_get_time();
+}
+
 static void sensor_cache_task(void *pvParameters)
 {
     (void)pvParameters;
@@ -33,11 +42,11 @@ static void sensor_cache_task(void *pvParameters)
     {
         if (xSemaphoreTake(s_snapshot_mutex, portMAX_DELAY) == pdTRUE)
         {
-            s_snapshot.humidity = SENSOR_DEFAULT_HUMIDITY;
-            s_snapshot.temperature = SENSOR_DEFAULT_TEMPERATURE;
-            s_snapshot.soilMoisture = SENSOR_DEFAULT_SOIL_MOISTURE;
-            s_snapshot.valid = true;
-            s_snapshot.timestamp_us = esp_timer_get_time();
+            // Keep latest pushed values intact; only bootstrap timestamp once.
+            if (s_snapshot.timestamp_us == 0)
+            {
+                s_snapshot.timestamp_us = esp_timer_get_time();
+            }
             xSemaphoreGive(s_snapshot_mutex);
         }
 
@@ -92,4 +101,21 @@ bool sensor_cache_get_snapshot(sensor_snapshot_t *snapshot)
     *snapshot = s_snapshot;
     xSemaphoreGive(s_snapshot_mutex);
     return snapshot->valid;
+}
+
+esp_err_t sensor_cache_update_snapshot(float temperature, float humidity, float soil_moisture)
+{
+    if (s_snapshot_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (xSemaphoreTake(s_snapshot_mutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    sensor_cache_set_values_locked(temperature, humidity, soil_moisture);
+    xSemaphoreGive(s_snapshot_mutex);
+    return ESP_OK;
 }
