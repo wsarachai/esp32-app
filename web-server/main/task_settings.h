@@ -12,7 +12,10 @@
 #define MAIN_TASK_CORE_ID TASK_CORE_ID_DEFAULT
 
 // WiFi application task settings
-#define WIFI_APP_TASK_STACK_SIZE TASK_STACK_SIZE_DEFAULT
+// NOTE: 8192 bytes required — wifi_app_task calls esp_wifi_start() which triggers
+// full RF phy calibration on first boot. 4096 bytes is not enough for the full
+// calibration call stack and causes a silent stack overflow → SW_RESET boot loop.
+#define WIFI_APP_TASK_STACK_SIZE 8192
 #define WIFI_APP_TASK_PRIORITY TASK_PRIORITY_DEFAULT
 #define WIFI_APP_TASK_CORE_ID TASK_CORE_ID_DEFAULT
 
