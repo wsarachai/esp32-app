@@ -13,7 +13,57 @@
 
 static const char TAG[] = "http_server_status";
 
-#define SENSOR_UPDATE_MAX_BODY_LEN 160
+#define SENSOR_UPDATE_MAX_BODY_LEN 256
+
+static bool parse_json_string_field(const char *json, const char *key, char *out, size_t out_size)
+{
+  if (json == NULL || key == NULL || out == NULL || out_size < 2)
+  {
+    return false;
+  }
+
+  char needle[48];
+  int needle_len = snprintf(needle, sizeof(needle), "\"%s\"", key);
+  if (needle_len <= 0 || needle_len >= (int)sizeof(needle))
+  {
+    return false;
+  }
+
+  const char *key_pos = strstr(json, needle);
+  if (key_pos == NULL)
+  {
+    return false;
+  }
+
+  const char *colon = strchr(key_pos, ':');
+  if (colon == NULL)
+  {
+    return false;
+  }
+
+  const char *start_quote = strchr(colon, '"');
+  if (start_quote == NULL)
+  {
+    return false;
+  }
+
+  start_quote++;
+  const char *end_quote = strchr(start_quote, '"');
+  if (end_quote == NULL)
+  {
+    return false;
+  }
+
+  size_t len = (size_t)(end_quote - start_quote);
+  if (len == 0 || len >= out_size)
+  {
+    return false;
+  }
+
+  memcpy(out, start_quote, len);
+  out[len] = '\0';
+  return true;
+}
 
 static bool parse_json_float_field(const char *json, const char *key, float *out)
 {
@@ -72,6 +122,11 @@ static esp_err_t http_server_sensor_update_handler(httpd_req_t *req)
   float temperature = 0.0f;
   float humidity = 0.0f;
   float soil_moisture = 0.0f;
+  char device_id[64] = "unknown";
+
+  // device_id is optional for backward compatibility with old clients.
+  parse_json_string_field(body, "device_id", device_id, sizeof(device_id));
+
   bool ok = parse_json_float_field(body, "temperature", &temperature) &&
             parse_json_float_field(body, "humidity", &humidity) &&
             parse_json_float_field(body, "soil_moisture", &soil_moisture);
@@ -90,11 +145,20 @@ static esp_err_t http_server_sensor_update_handler(httpd_req_t *req)
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Sensor update received temp=%.2f humidity=%.2f soil=%.2f", temperature, humidity, soil_moisture);
+  ESP_LOGI(TAG, "Sensor update received device=%s temp=%.2f humidity=%.2f soil=%.2f",
+           device_id, temperature, humidity, soil_moisture);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
-  return httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+
+  char json_response[112];
+  int written = snprintf(json_response, sizeof(json_response),
+                         "{\"status\":\"ok\",\"device_id\":\"%s\"}", device_id);
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    return httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+  }
+  return httpd_resp_sendstr(req, json_response);
 }
 
 static esp_err_t parse_header_u16(httpd_req_t *req, const char *header_name, uint16_t *out)

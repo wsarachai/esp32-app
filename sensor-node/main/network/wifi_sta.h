@@ -25,4 +25,11 @@ void wifi_sta_start(void);
  */
 bool wifi_sta_is_connected(void);
 
+/**
+ * @brief Forces a WiFi disconnect + reconnect cycle.
+ *        Call when the server is unreachable despite WiFi appearing connected
+ *        (e.g. AP rebooted but deauth frame was never received).
+ */
+void wifi_sta_force_reconnect(void);
+
 #endif // WIFI_STA_H

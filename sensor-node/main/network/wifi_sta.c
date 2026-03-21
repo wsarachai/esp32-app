@@ -5,6 +5,7 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -19,9 +20,17 @@ static const char *TAG = "wifi_sta";
 
 static EventGroupHandle_t s_event_group;
 static volatile bool s_connected = false;
+static esp_timer_handle_t s_reconnect_timer = NULL;
 
 #define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT BIT1
+#define WIFI_FAIL_BIT      BIT1
+#define WIFI_RECONNECT_DELAY_US (1000 * 1000) // 1 second
+
+static void reconnect_timer_cb(void *arg)
+{
+    ESP_LOGI(TAG, "Reconnecting to \"%s\"...", WIFI_STA_AP_SSID);
+    esp_wifi_connect();
+}
 
 bool wifi_sta_is_connected(void)
 {
@@ -52,8 +61,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t base,
         {
             s_connected = false;
             app_send_message(APP_MSG_WIFI_DISCONNECTED);
-            ESP_LOGW(TAG, "STA disconnected — reconnecting...");
-            esp_wifi_connect();
+            ESP_LOGW(TAG, "STA disconnected — retrying in 1s...");
+            // Stop any pending timer before (re-)scheduling to avoid double-fire.
+            esp_timer_stop(s_reconnect_timer);
+            esp_timer_start_once(s_reconnect_timer, WIFI_RECONNECT_DELAY_US);
             break;
         }
 
@@ -98,13 +109,20 @@ static void wifi_sta_task(void *pvParameters)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    // 4. Register event handlers
+    // 4. Create the reconnect timer (one-shot, restarted on each disconnect).
+    const esp_timer_create_args_t timer_args = {
+        .callback = reconnect_timer_cb,
+        .name = "wifi_reconnect",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &s_reconnect_timer));
+
+    // 5. Register event handlers
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL, NULL));
 
-    // 5. Configure STA with the target AP credentials
+    // 6. Configure STA with the target AP credentials
     wifi_config_t sta_cfg = {
         .sta = {
             .ssid = WIFI_STA_AP_SSID,
@@ -128,6 +146,18 @@ static void wifi_sta_task(void *pvParameters)
 
     ESP_LOGI(TAG, "Initial connection to \"%s\" established", WIFI_STA_AP_SSID);
     vTaskDelete(NULL);
+}
+
+void wifi_sta_force_reconnect(void)
+{
+    if (!s_connected)
+    {
+        return; // already cycling, reconnect timer will handle it
+    }
+    ESP_LOGW(TAG, "Server unreachable — forcing WiFi reconnect");
+    s_connected = false;
+    // Disconnect fires WIFI_EVENT_STA_DISCONNECTED -> reconnect timer -> esp_wifi_connect()
+    esp_wifi_disconnect();
 }
 
 void wifi_sta_start(void)

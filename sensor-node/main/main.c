@@ -32,6 +32,7 @@ static void main_task(void *pvParameters)
     }
 
     wifi_sta_start();
+    sensor_task_start();
 
     while (1)
     {
@@ -42,7 +43,6 @@ static void main_task(void *pvParameters)
             {
             case APP_MSG_WIFI_CONNECTED_GOT_IP:
                 ESP_LOGI(TAG, "APP_MSG_WIFI_CONNECTED_GOT_IP");
-                sensor_task_start();
                 break;
 
             case APP_MSG_WIFI_DISCONNECTED:

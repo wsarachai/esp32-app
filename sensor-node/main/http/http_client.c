@@ -68,7 +68,7 @@ esp_err_t http_client_post_sensor_data(float temperature, float humidity, float 
     esp_http_client_config_t config = {
         .url = SENSOR_UPDATE_URL,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 5000,
+        .timeout_ms = 3000,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
