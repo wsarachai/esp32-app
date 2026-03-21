@@ -20,6 +20,7 @@
 static const char *TAG = "wifi_app";
 static wifi_config_t s_ap_config;
 static wifi_config_t s_sta_config;
+static wifi_init_config_t s_wifi_init_config;
 static volatile uint8_t s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
 
 /**
@@ -34,25 +35,21 @@ uint8_t wifi_app_get_sta_connect_status(void)
 
 esp_err_t wifi_app_connect_sta(void)
 {
-  char cfg_ssid[MAX_SSID_LENGTH + 1] = {0};
-  char cfg_password[MAX_PASSWORD_LENGTH + 1] = {0};
-  esp_err_t err = wifi_app_get_sta_creds(cfg_ssid, sizeof(cfg_ssid), cfg_password, sizeof(cfg_password));
-  if (err != ESP_OK)
+  size_t ssid_len = strnlen((const char *)s_sta_config.sta.ssid, sizeof(s_sta_config.sta.ssid));
+  size_t pass_len = strnlen((const char *)s_sta_config.sta.password, sizeof(s_sta_config.sta.password));
+  if (ssid_len == 0 || pass_len == 0)
   {
-    ESP_LOGE(TAG, "No valid STA credentials to connect: %s", esp_err_to_name(err));
-    return err;
+    ESP_LOGE(TAG, "No valid STA credentials to connect");
+    return ESP_ERR_INVALID_STATE;
   }
 
-  wifi_config_t sta_cfg = {0};
-  memcpy(sta_cfg.sta.ssid, cfg_ssid, strlen(cfg_ssid));
-  memcpy(sta_cfg.sta.password, cfg_password, strlen(cfg_password));
-  sta_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-  sta_cfg.sta.pmf_cfg.capable = true;
-  sta_cfg.sta.pmf_cfg.required = false;
+  s_sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+  s_sta_config.sta.pmf_cfg.capable = true;
+  s_sta_config.sta.pmf_cfg.required = false;
 
   ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_disconnect());
 
-  err = esp_wifi_set_config(WIFI_IF_STA, &sta_cfg);
+  esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &s_sta_config);
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "esp_wifi_set_config failed: %s", esp_err_to_name(err));
@@ -68,7 +65,7 @@ esp_err_t wifi_app_connect_sta(void)
   }
 
   s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
-  ESP_LOGI(TAG, "Started STA connection attempt to SSID: %s", cfg_ssid);
+  ESP_LOGI(TAG, "Started STA connection attempt to SSID: %s", (const char *)s_sta_config.sta.ssid);
   return ESP_OK;
 }
 
@@ -241,8 +238,8 @@ static void wifi_app_task(void *pvParameters)
   ESP_ERROR_CHECK(esp_netif_dhcps_start(ap_netif));
 
   // 6. Initialise the WiFi driver with default configuration
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  s_wifi_init_config = (wifi_init_config_t)WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&s_wifi_init_config));
 
   // 7. Register event handlers for WiFi and IP events
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
