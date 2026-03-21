@@ -1,5 +1,6 @@
 idf_component_register(SRCS "actuators/relay.c" "http/http_server_monitor.c" "sensors/sensor_cache.c" "sensors/soil_moisture_adc.c" "main.c"
                              "storage/app_nvs.c"
+                             "storage/water_config.c"
                              "http/http_server.c"
                              "http/http_server_relay.c"
                              "http/http_server_static.c"

@@ -10,5 +10,18 @@
   "idf.buildPath": "${workspaceFolder}/build",
   "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
   "idf.portWin": "COM3",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "terminal.integrated.profiles.windows": {
+    "ESP-IDF PowerShell": {
+      "source": "PowerShell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-NoExit",
+        "-Command",
+        "& 'C:/Espressif/frameworks/esp-idf-v5.3.1/export.ps1'"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "ESP-IDF PowerShell"
 }

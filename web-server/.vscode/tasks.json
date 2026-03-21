@@ -1,0 +1,73 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "ESP-IDF: Build",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-NoProfile",
+				"-Command",
+				"& 'C:/Espressif/frameworks/esp-idf-v5.3.1/export.ps1'; idf.py build"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "ESP-IDF: Flash",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-NoProfile",
+				"-Command",
+				"& 'C:/Espressif/frameworks/esp-idf-v5.3.1/export.ps1'; idf.py -p COM3 flash"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "ESP-IDF: Monitor",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-NoProfile",
+				"-Command",
+				"& 'C:/Espressif/frameworks/esp-idf-v5.3.1/export.ps1'; idf.py -p COM3 monitor"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "ESP-IDF: Build",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-NoProfile",
+				"-Command",
+				"& 'C:/Espressif/frameworks/esp-idf-v5.3.1/export.ps1'; idf.py build"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

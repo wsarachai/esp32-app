@@ -340,14 +340,17 @@ SystemConfig.prototype.createBodyInfo = function () {
 
 SystemConfig.prototype.setMinMoistureLevel = function (minMoistureLevel) {
   this.minMoistureLevel.innerHTML = " " + minMoistureLevel + " %";
+  $(this.minMoistureLevelInput).val(minMoistureLevel);
 };
 
 SystemConfig.prototype.setMaxMoistureLevel = function (maxMoistureLevel) {
   this.maxMoistureLevel.innerHTML = " " + maxMoistureLevel + " %";
+  $(this.maxMoistureLevelInput).val(maxMoistureLevel);
 };
 
 SystemConfig.prototype.setMaxTimeSpend = function (timeSpend) {
   this.maxTimeSpend.innerHTML = " " + timeSpend + " นาที";
+  $(this.maxTimeSpendInput).val(timeSpend);
 };
 
 SystemConfig.prototype.saveWaterConfigure = function () {
@@ -366,6 +369,14 @@ SystemConfig.prototype.saveWaterConfigure = function () {
       duration: duration,
     },
     data: { timestamp: Date.now() },
+    success: (data) => {
+      this.setMinMoistureLevel(data["min-moiture-level"]);
+      this.setMaxMoistureLevel(data["max-moiture-level"]);
+      this.setMaxTimeSpend(data["duration"]);
+    },
+    error: (xhr, status, error) => {
+      console.error("Failed to save water configuration:", error);
+    },
   });
 };
 
@@ -995,5 +1006,6 @@ $(document).ready(function () {
     relayControl,
     wifiConnectionInfo
   );
+  getESPServerStatusBind();
   setInterval(getESPServerStatusBind, 5000);
 });
