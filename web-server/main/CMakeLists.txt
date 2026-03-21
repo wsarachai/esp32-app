@@ -7,6 +7,7 @@ idf_component_register(SRCS "actuators/relay.c" "actuators/irrigation_ctrl.c" "h
                              "http/http_server_status.c"
                              "http/http_server_wifi.c"
                              "network/wifi_app.c"
+                             "network/time_sync.c"
                              "actuators/rgb-led.c"
                              "sensors/dht22.c"
                     INCLUDE_DIRS "." "http" "network" "storage" "sensors" "actuators"

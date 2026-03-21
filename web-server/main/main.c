@@ -9,6 +9,7 @@
 #include "relay.h"
 #include "sensor_cache.h"
 #include "task_settings.h"
+#include "time_sync.h"
 #include "wifi_app.h"
 #include "http_server_monitor.h"
 #include "main.h"
@@ -80,6 +81,8 @@ static void main_task(void *pvParameters)
           ESP_LOGI(TAG, "Skipping credential save: connection was not initiated from HTTP request");
         }
 
+        // Start SNTP now that we have internet access.
+        time_sync_start();
         break;
 
       case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:
