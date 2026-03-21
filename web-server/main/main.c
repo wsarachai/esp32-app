@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "app_nvs.h"
 #include "http_server.h"
 #include "irrigation_ctrl.h"
@@ -18,8 +19,23 @@
 static const char TAG[] = "main_app";
 static bool s_sta_connect_requested_from_http = false;
 
+#define SENSOR_DATA_FLASH_DURATION_MS 150
+
+static rgb_led_color_id_t s_current_led_color = RGB_LED_COLOR_BLUE;
+static esp_timer_handle_t s_led_restore_timer = NULL;
+
+static void led_restore_timer_cb(void *arg)
+{
+  rgb_led_set_color_by_id(s_current_led_color);
+}
+
 static void set_led_status(rgb_led_color_id_t color)
 {
+  s_current_led_color = color;
+  if (s_led_restore_timer != NULL)
+  {
+    esp_timer_stop(s_led_restore_timer);
+  }
   esp_err_t err = rgb_led_set_color_by_id(color);
   if (err != ESP_OK)
   {
@@ -53,6 +69,12 @@ static void main_task(void *pvParameters)
   {
     ESP_LOGE(TAG, "RGB LED init failed: %s", esp_err_to_name(led_init_status));
   }
+
+  const esp_timer_create_args_t led_restore_timer_args = {
+    .callback = led_restore_timer_cb,
+    .name = "led_restore",
+  };
+  esp_timer_create(&led_restore_timer_args, &s_led_restore_timer);
 
   relay_init();
   ESP_LOGI(TAG, "Relay initialized");
@@ -102,6 +124,14 @@ static void main_task(void *pvParameters)
 
         // Start SNTP now that we have internet access.
         time_sync_start();
+        break;
+
+      case APP_MSG_SENSOR_DATA_RECEIVED:
+        rgb_led_set_color_by_id(RGB_LED_COLOR_WHITE);
+        if (s_led_restore_timer != NULL)
+        {
+          esp_timer_start_once(s_led_restore_timer, SENSOR_DATA_FLASH_DURATION_MS * 1000ULL);
+        }
         break;
 
       case WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER:

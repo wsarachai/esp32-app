@@ -11,6 +11,7 @@
 #include "http_server_monitor.h"
 #include "wifi_app.h"
 #include "water_config.h"
+#include "main.h"
 
 static const char TAG[] = "http_server_status";
 
@@ -145,6 +146,8 @@ static esp_err_t http_server_sensor_update_handler(httpd_req_t *req)
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to update sensor cache");
     return ESP_FAIL;
   }
+
+  app_send_message(APP_MSG_SENSOR_DATA_RECEIVED);
 
   ESP_LOGI(TAG, "Sensor update received device=%s temp=%.2f humidity=%.2f soil=%.2f",
            device_id, temperature, humidity, soil_moisture);
