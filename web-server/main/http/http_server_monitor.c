@@ -1,6 +1,7 @@
 #include "http_server_monitor.h"
 
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -12,6 +13,7 @@ static TaskHandle_t s_http_monitor_task_handle = NULL;
 QueueHandle_t http_server_monitor_queue_handle = NULL;
 
 #define HTTP_SERVER_MONITOR_PERIOD_MS 5000
+#define OTA_REBOOT_DELAY_MS 10000
 #define HTTP_SERVER_MONITOR_STACK_SIZE TASK_STACK_SIZE_DEFAULT
 #define HTTP_SERVER_MONITOR_PRIORITY TASK_PRIORITY_DEFAULT
 #define HTTP_SERVER_MONITOR_CORE_ID TASK_CORE_ID_DEFAULT
@@ -19,6 +21,9 @@ QueueHandle_t http_server_monitor_queue_handle = NULL;
 static void http_server_monitor_task(void *pvParameters)
 {
     (void)pvParameters;
+
+    bool ota_reboot_pending = false;
+    TickType_t ota_reboot_deadline = 0;
 
     while (1)
     {
@@ -40,6 +45,15 @@ static void http_server_monitor_task(void *pvParameters)
                 // When WiFi connection is initiated, proactively check if the server is running and restart if not.
                 should_restart = true;
                 break;
+            case HTTP_MSG_OTA_UPDATE_SUCCESSFUL:
+                ota_reboot_pending = true;
+                ota_reboot_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(OTA_REBOOT_DELAY_MS);
+                ESP_LOGI(TAG, "OTA successful, reboot scheduled in %d ms", OTA_REBOOT_DELAY_MS);
+                break;
+            case HTTP_MSG_OTA_UPDATE_FAILED:
+                ota_reboot_pending = false;
+                ota_reboot_deadline = 0;
+                break;
             case HTTP_SERVER_MONITOR_MSG_CHECK_NOW:
             default:
                 break;
@@ -58,6 +72,13 @@ static void http_server_monitor_task(void *pvParameters)
             {
                 ESP_LOGI(TAG, "HTTP server restarted by monitor task");
             }
+        }
+
+        if (ota_reboot_pending && xTaskGetTickCount() >= ota_reboot_deadline)
+        {
+            ESP_LOGI(TAG, "Rebooting into updated firmware");
+            vTaskDelay(pdMS_TO_TICKS(200));
+            esp_restart();
         }
 
         vTaskDelay(pdMS_TO_TICKS(HTTP_SERVER_MONITOR_PERIOD_MS));

@@ -12,5 +12,6 @@ esp_err_t http_server_register_static_handlers(httpd_handle_t server);
 esp_err_t http_server_register_status_handlers(httpd_handle_t server);
 esp_err_t http_server_register_relay_handlers(httpd_handle_t server);
 esp_err_t http_server_register_wifi_handlers(httpd_handle_t server);
+esp_err_t http_server_register_ota_handlers(httpd_handle_t server);
 
 #endif // HTTP_SERVER_H

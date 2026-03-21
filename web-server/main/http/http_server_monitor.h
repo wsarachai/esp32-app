@@ -12,6 +12,8 @@ typedef enum
     HTTP_SERVER_MONITOR_MSG_CHECK_NOW = 0,
     HTTP_SERVER_MONITOR_MSG_RESTART,
     HTTP_MSG_WIFI_CONNECT_INIT,
+    HTTP_MSG_OTA_UPDATE_SUCCESSFUL,
+    HTTP_MSG_OTA_UPDATE_FAILED,
 } http_server_monitor_msg_id_t;
 
 typedef struct

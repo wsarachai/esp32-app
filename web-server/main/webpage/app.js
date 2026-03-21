@@ -918,13 +918,10 @@ FirmwareUpdate.prototype.createBodyInfo = function () {
 };
 
 FirmwareUpdate.prototype.updateFirmware = function () {
-  // Form Data
-  let formData = new FormData();
   let fileSelect = this.selectFile;
 
   if (fileSelect.files && fileSelect.files.length == 1) {
     var file = fileSelect.files[0];
-    formData.set("file", file, file.name);
     this.otaUpdateStatus.innerHTML =
       "เฟิร์มแวร์ไฟล์ " +
       file.name +
@@ -934,9 +931,13 @@ FirmwareUpdate.prototype.updateFirmware = function () {
     let request = new XMLHttpRequest();
 
     request.upload.addEventListener("progress", this.updateProgress.bind(this));
+    request.addEventListener("load", this.getUpdateStatus.bind(this));
+    request.addEventListener("error", () => {
+      this.setOTAUpdateStatus("!!! Upload Error !!!");
+    });
     request.open("POST", "/OTAupdate");
-    request.responseType = "blob";
-    request.send(formData);
+    request.setRequestHeader("Content-Type", "application/octet-stream");
+    request.send(file);
   } else {
     window.alert("Select A File First");
   }

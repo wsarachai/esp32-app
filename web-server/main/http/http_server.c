@@ -15,7 +15,7 @@ esp_err_t http_server_start(void)
   }
 
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_uri_handlers = 16;
+  config.max_uri_handlers = 20;
 
   ESP_LOGI(TAG, "Starting HTTP server on port %d", config.server_port);
   esp_err_t err = httpd_start(&s_server, &config);
@@ -56,6 +56,15 @@ esp_err_t http_server_start(void)
   if (err != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to register WiFi handlers: %s", esp_err_to_name(err));
+    httpd_stop(s_server);
+    s_server = NULL;
+    return err;
+  }
+
+  err = http_server_register_ota_handlers(s_server);
+  if (err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to register OTA handlers: %s", esp_err_to_name(err));
     httpd_stop(s_server);
     s_server = NULL;
     return err;
