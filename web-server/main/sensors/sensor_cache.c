@@ -13,6 +13,10 @@
 #define SENSOR_DEFAULT_TEMPERATURE   0.0f
 #define SENSOR_DEFAULT_SOIL_MOISTURE 50.0f
 #define SENSOR_DEVICE_ID_MAX_LEN     32
+#define SOIL_MOISTURE_MIN            0.0f
+#define SOIL_MOISTURE_MAX            100.0f
+#define SOIL_MOISTURE_EMA_ALPHA      0.20f
+#define SOIL_MOISTURE_MAX_STEP       12.0f
 
 static const char *TAG = "sensor_cache";
 
@@ -31,6 +35,38 @@ static SemaphoreHandle_t s_mutex       = NULL;
 static device_entry_t    s_device_table[SENSOR_CACHE_MAX_DEVICES];
 static int               s_device_count = 0;
 static bool              s_started      = false;
+
+static float clamp_float(float value, float min_value, float max_value)
+{
+    if (value < min_value)
+    {
+        return min_value;
+    }
+    if (value > max_value)
+    {
+        return max_value;
+    }
+    return value;
+}
+
+static float smooth_soil_moisture(float previous_value, float new_value)
+{
+    float target = clamp_float(new_value, SOIL_MOISTURE_MIN, SOIL_MOISTURE_MAX);
+
+    // Exponential moving average + per-update delta limiter for spike resistance.
+    float ema_value = previous_value + (SOIL_MOISTURE_EMA_ALPHA * (target - previous_value));
+    float delta = ema_value - previous_value;
+    if (delta > SOIL_MOISTURE_MAX_STEP)
+    {
+        delta = SOIL_MOISTURE_MAX_STEP;
+    }
+    else if (delta < -SOIL_MOISTURE_MAX_STEP)
+    {
+        delta = -SOIL_MOISTURE_MAX_STEP;
+    }
+
+    return clamp_float(previous_value + delta, SOIL_MOISTURE_MIN, SOIL_MOISTURE_MAX);
+}
 
 /* ------------------------------------------------------------------ */
 
@@ -260,9 +296,15 @@ esp_err_t sensor_cache_update_snapshot(const char *device_id,
 
     strncpy(s_device_table[slot].device_id, device_id, SENSOR_DEVICE_ID_MAX_LEN - 1);
     s_device_table[slot].device_id[SENSOR_DEVICE_ID_MAX_LEN - 1] = '\0';
+    float soil_moisture_filtered = clamp_float(soil_moisture, SOIL_MOISTURE_MIN, SOIL_MOISTURE_MAX);
+    if (!is_new)
+    {
+        soil_moisture_filtered = smooth_soil_moisture(s_device_table[slot].soilMoisture, soil_moisture);
+    }
+
     s_device_table[slot].temperature  = temperature;
     s_device_table[slot].humidity     = humidity;
-    s_device_table[slot].soilMoisture = soil_moisture;
+    s_device_table[slot].soilMoisture = soil_moisture_filtered;
     s_device_table[slot].valid        = true;
     s_device_table[slot].timestamp_us = esp_timer_get_time();
 
