@@ -320,6 +320,35 @@ static esp_err_t http_server_local_time_handler(httpd_req_t *req)
   return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
 }
 
+static esp_err_t http_server_client_info_handler(httpd_req_t *req)
+{
+  uint8_t online_node_count = http_server_monitor_online_node_count();
+  uint8_t registered_node_count = http_server_monitor_registered_node_count();
+  
+  // For web connections, we count 1 for the current browser client
+  // This could be enhanced to track multiple concurrent web connections
+  uint8_t web_connected_count = 1;
+
+  char json_response[128];
+  int written = snprintf(
+      json_response,
+      sizeof(json_response),
+      "{\"online-nodes\":%u,\"registered-nodes\":%u,\"web-connected\":%u}",
+      (unsigned int)online_node_count,
+      (unsigned int)registered_node_count,
+      (unsigned int)web_connected_count);
+
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
 esp_err_t http_server_register_status_handlers(httpd_handle_t server)
 {
   httpd_uri_t esp_server_status = {
@@ -364,5 +393,17 @@ esp_err_t http_server_register_status_handlers(httpd_handle_t server)
       .handler = http_server_sensor_update_handler,
       .user_ctx = NULL,
   };
-  return httpd_register_uri_handler(server, &sensor_update);
+  err = httpd_register_uri_handler(server, &sensor_update);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t client_info = {
+      .uri = "/clientInfo.json",
+      .method = HTTP_GET,
+      .handler = http_server_client_info_handler,
+      .user_ctx = NULL,
+  };
+  return httpd_register_uri_handler(server, &client_info);
 }

@@ -250,14 +250,12 @@ GeneralInfo.prototype.setSoilMoistureReading = function (soilMoisture) {
   this.soilMoistureBar.setProgress(soilMoisture);
 };
 
-GeneralInfo.prototype.setNoDataState = function (onlineCount, registeredCount) {
+GeneralInfo.prototype.setNoDataState = function () {
   this.temperatureReading.innerHTML = "No data";
   this.humidityReading.innerHTML = "No data";
   this.soilMoistureReading.innerHTML = "No data";
   this.humidityBar.setProgress(0);
   this.soilMoistureBar.setProgress(0);
-  this.sensorAvailabilityNotice.innerHTML =
-    "ยังไม่มีข้อมูลจาก client node (ออนไลน์ " + onlineCount + "/" + registeredCount + ")";
 };
 
 GeneralInfo.prototype.setDataAvailableState = function () {
@@ -558,28 +556,72 @@ RelayControl.prototype.getRelayStatus = function () {
 ////////////////////////////////////////
 // SSID Information
 ////////////////////////////////////////
-const SSIDInfo = function () {
+const ConnectivityInfo = function () {
   Section.call(this, "ssid-info", "ข้อมูลเครือข่าย (SSID)");
 
   this.createBodyInfo();
 };
-SSIDInfo.prototype = Object.create(Section.prototype);
+ConnectivityInfo.prototype = Object.create(Section.prototype);
 
-SSIDInfo.prototype.createBodyInfo = function () {
+ConnectivityInfo.prototype.createBodyInfo = function () {
   this.apSSID = createElement("div", { id: "ap-ssid", class: "data" });
   this.appendChild(this.apSSID);
+
+  // Client Node Info
+  const clientNodeInfo = createElement("div", { class: "client-info" });
+  clientNodeInfo.appendChild(createElement("label", {}, "โหนด Client:"));
+  this.clientNodeStatus = createElement("span", {
+    id: "client-node-status",
+    class: "data",
+  });
+  clientNodeInfo.appendChild(this.clientNodeStatus);
+
+  // Web Connection Info
+  const webConnectionInfo = createElement("div", { class: "client-info" });
+  webConnectionInfo.appendChild(createElement("label", {}, "การเชื่อมต่อ Web:"));
+  this.webConnectionStatus = createElement("span", {
+    id: "web-connection-status",
+    class: "data",
+  });
+  webConnectionInfo.appendChild(this.webConnectionStatus);
+
+  this.appendChild(clientNodeInfo);
+  this.appendChild(webConnectionInfo);
 };
 
-SSIDInfo.prototype.setSSID = function (ssid) {
+ConnectivityInfo.prototype.setSSID = function (ssid) {
   this.apSSID.innerHTML = ssid;
 };
 
-SSIDInfo.prototype.getSSID = function () {
+ConnectivityInfo.prototype.getSSID = function () {
   function payload(data) {
     this.setSSID(data["ssid"]);
   }
 
   $.getJSON("/apSSID.json", payload.bind(this));
+};
+
+ConnectivityInfo.prototype.getClientInfo = function () {
+  function payload(data) {
+    this.setClientNodeStatus(data["online-nodes"], data["registered-nodes"]);
+    this.setWebConnectionStatus(data["web-connected"], 1);
+  }
+
+  fetch("/clientInfo.json", {
+    method: "GET",
+    cache: "no-cache",
+  })
+    .then((response) => response.json())
+    .then(payload.bind(this))
+    .catch((error) => console.error("Failed to get client info:", error));
+};
+
+ConnectivityInfo.prototype.setClientNodeStatus = function (onlineCount, registeredCount) {
+  this.clientNodeStatus.innerHTML = onlineCount + " / " + registeredCount;
+};
+
+ConnectivityInfo.prototype.setWebConnectionStatus = function (connectedCount, totalCount) {
+  this.webConnectionStatus.innerHTML = connectedCount + " / " + totalCount;
 };
 
 ////////////////////////////////////////
@@ -1075,10 +1117,7 @@ function getESPServerStatus(
         generalInfo.setHumidityReading(data["humidity"]);
         generalInfo.setSoilMoistureReading(data["soil-moisture"]);
       } else {
-        generalInfo.setNoDataState(
-          parseInt(data["online-node-count"] || 0),
-          parseInt(data["registered-node-count"] || 0)
-        );
+        generalInfo.setNoDataState();
       }
 
       systemConfig.setMinMoistureLevel(data["min-moiture-level"]);
@@ -1126,6 +1165,8 @@ $(document).ready(function () {
   $(relayControl.relayButton).hide();
   relayControl.getRelayStatus();
   ssidInfo.getSSID();
+  ssidInfo.getClientInfo();
+  setInterval(ssidInfo.getClientInfo.bind(ssidInfo), 10000);
   firmwareUpdate.getUpdateStatus();
 
   mainContainer.appendChild(generalInfo);
