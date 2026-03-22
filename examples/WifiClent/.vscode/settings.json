@@ -8,5 +8,10 @@
   ],
   "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.3.1/",
   "idf.flashType": "UART",
-  "idf.portWin": "COM5"
+  "idf.portWin": "COM5",
+  "editor.detectIndentation": false,
+  "[c]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
 }

@@ -14,5 +14,10 @@
     "IDF_TARGET": "esp32"
   },
   "idf.portWin": "COM3",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "editor.detectIndentation": false,
+  "[c]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
 }
