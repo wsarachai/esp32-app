@@ -23,5 +23,10 @@
       ]
     }
   },
-  "terminal.integrated.defaultProfile.windows": "ESP-IDF PowerShell"
+  "terminal.integrated.defaultProfile.windows": "ESP-IDF PowerShell",
+  "editor.detectIndentation": false,
+  "[c]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
 }
