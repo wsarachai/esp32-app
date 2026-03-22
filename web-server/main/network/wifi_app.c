@@ -406,6 +406,12 @@ static void wifi_app_task(void *pvParameters)
           .max_connection = WIFI_AP_MAX_CONNECTIONS,
           .beacon_interval = WIFI_AP_BEACON_INTERVAL,
           .authmode = WIFI_AUTH_WPA2_PSK,
+          // Disable PMF advertisement to prevent CCMP replay counter
+          // desync errors when clients with MAC randomization reconnect.
+          .pmf_cfg = {
+              .capable = false,
+              .required = false,
+          },
       },
   };
 

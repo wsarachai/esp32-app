@@ -162,9 +162,9 @@ static void main_task(void *pvParameters)
       s_last_relay_state = relay_on;
       if (relay_on)
       {
-        ESP_LOGI(TAG, "Relay ON — LED YELLOW");
-        s_current_led_color = RGB_LED_COLOR_YELLOW;
-        rgb_led_set_color_by_id(RGB_LED_COLOR_YELLOW);
+        ESP_LOGI(TAG, "Relay ON — LED MAGENTA");
+        s_current_led_color = RGB_LED_COLOR_MAGENTA;
+        rgb_led_set_color_by_id(RGB_LED_COLOR_MAGENTA);
       }
       else
       {
