@@ -1157,7 +1157,7 @@ $(document).ready(function () {
   const generalInfo = new GeneralInfo();
   const systemConfig = new SystemConfig();
   const relayControl = new RelayControl();
-  const ssidInfo = new SSIDInfo();
+  const ssidInfo = new ConnectivityInfo();
   const wifiConnectionInfo = new WiFiConnectionInfo();
   const wifiConnection = new WiFiConnection(wifiConnectionInfo);
   const firmwareUpdate = new FirmwareUpdate();

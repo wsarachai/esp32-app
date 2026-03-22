@@ -212,15 +212,16 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   bool sensor_data_available = http_server_monitor_is_sensor_data_available();
   uint8_t online_node_count = http_server_monitor_online_node_count();
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
+  uint8_t web_connected_count = 1;
 
   char time_buf[32];
   time_sync_get_local_time(time_buf, sizeof(time_buf));
 
-    char json_response[480];
+    char json_response[520];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u}",
+      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u,\"web-connected\":%u}",
       time_buf,
       snapshot.temperature,
       snapshot.humidity,
@@ -232,7 +233,8 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
       relay_status,
       sensor_data_available ? "true" : "false",
       (unsigned int)online_node_count,
-      (unsigned int)registered_node_count);
+      (unsigned int)registered_node_count,
+      (unsigned int)web_connected_count);
 
   if (written < 0 || written >= (int)sizeof(json_response))
   {
