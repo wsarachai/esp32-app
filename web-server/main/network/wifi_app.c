@@ -6,6 +6,9 @@
 
 #include "esp_log.h"
 #include "esp_mac.h"
+#if WIFI_APP_ENABLE_HEAP_EVENT_LOG
+#include "esp_heap_caps.h"
+#endif
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -22,20 +25,35 @@ static wifi_config_t s_ap_config;
 static wifi_config_t s_sta_config;
 static wifi_init_config_t s_wifi_init_config;
 static volatile uint8_t s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
+static volatile uint8_t s_ap_station_connected_count = 0;
 
 /**
  * Wifi application event group handle and status bits
  */
 static EventGroupHandle_t wifi_app_event_group;
 
+#if WIFI_APP_ENABLE_HEAP_EVENT_LOG
+static void wifi_app_log_heap(const char *stage)
+{
+  ESP_LOGI(TAG,
+           "Heap %s: free=%u, min=%u, largest=%u",
+           stage,
+           (unsigned)esp_get_free_heap_size(),
+           (unsigned)esp_get_minimum_free_heap_size(),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+}
+#else
+#define wifi_app_log_heap(stage) ((void)0)
+#endif
+
 #if WIFI_APP_ENABLE_STACK_MARGIN_LOG
 static void log_stack_margin(const char *stage)
 {
-  UBaseType_t high_water_words = uxTaskGetStackHighWaterMark(NULL);
-  ESP_LOGI(TAG, "Stack margin at %s: %lu words (%lu bytes)",
+  UBaseType_t high_water_units = uxTaskGetStackHighWaterMark(NULL);
+  ESP_LOGI(TAG, "Stack margin at %s: %lu stack units (%lu bytes)",
            stage,
-           (unsigned long)high_water_words,
-           (unsigned long)(high_water_words * sizeof(StackType_t)));
+           (unsigned long)high_water_units,
+           (unsigned long)(high_water_units * sizeof(StackType_t)));
 }
 #define WIFI_APP_LOG_STACK_MARGIN(stage) log_stack_margin(stage)
 #else
@@ -45,6 +63,11 @@ static void log_stack_margin(const char *stage)
 uint8_t wifi_app_get_sta_connect_status(void)
 {
   return s_sta_connect_status;
+}
+
+uint8_t wifi_app_get_ap_station_connected_count(void)
+{
+  return s_ap_station_connected_count;
 }
 
 esp_err_t wifi_app_connect_sta(void)
@@ -157,7 +180,12 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_STACONNECTED:
     {
       wifi_event_ap_staconnected_t *e = (wifi_event_ap_staconnected_t *)event_data;
+      if (s_ap_station_connected_count < 255)
+      {
+        s_ap_station_connected_count++;
+      }
       ESP_LOGI(TAG, "Station " MACSTR " connected (AID=%d)", MAC2STR(e->mac), e->aid);
+      wifi_app_log_heap("after AP STA connected");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_AP_CONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_AP_DISCONNECTED_BIT);
       break;
@@ -166,7 +194,13 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_STADISCONNECTED:
     {
       wifi_event_ap_stadisconnected_t *e = (wifi_event_ap_stadisconnected_t *)event_data;
-      ESP_LOGI(TAG, "Station " MACSTR " disconnected (AID=%d)", MAC2STR(e->mac), e->aid);
+      if (s_ap_station_connected_count > 0)
+      {
+        s_ap_station_connected_count--;
+      }
+      ESP_LOGW(TAG, "Station " MACSTR " disconnected (AID=%d, reason=%d)",
+               MAC2STR(e->mac), e->aid, e->reason);
+      wifi_app_log_heap("after AP STA disconnected");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_AP_DISCONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_AP_CONNECTED_BIT);
       break;
@@ -174,11 +208,11 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
 
     // STA events
     case WIFI_EVENT_STA_START:
-      ESP_LOGI(TAG, "STA started");
+      ESP_LOGD(TAG, "STA started");
       break;
 
     case WIFI_EVENT_STA_CONNECTED:
-      ESP_LOGI(TAG, "STA connected to AP");
+      ESP_LOGD(TAG, "STA connected to AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
@@ -186,7 +220,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       break;
 
     case WIFI_EVENT_STA_DISCONNECTED:
-      ESP_LOGI(TAG, "STA disconnected from AP");
+      ESP_LOGW(TAG, "STA disconnected from AP");
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT | WIFI_APP_STA_GOT_IP_BIT);
       if (s_sta_connect_status == WIFI_STA_CONNECT_STATUS_CONNECTING)
@@ -272,6 +306,15 @@ static void wifi_app_task(void *pvParameters)
   // 8. Set power-save mode
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_STA_POWER_SAVE));
 
+  // Apply regulatory domain and max AP transmit power.
+  wifi_country_t country_config = {
+      .cc = WIFI_COUNTRY_CODE,
+      .schan = 1,
+      .nchan = 11,
+      .policy = WIFI_COUNTRY_POLICY_MANUAL,
+  };
+  ESP_ERROR_CHECK(esp_wifi_set_country(&country_config));
+
   // 9. Configure the AP
   memset(&s_ap_config, 0, sizeof(s_ap_config));
   s_ap_config = (wifi_config_t){
@@ -284,6 +327,10 @@ static void wifi_app_task(void *pvParameters)
           .max_connection = WIFI_AP_MAX_CONNECTIONS,
           .beacon_interval = WIFI_AP_BEACON_INTERVAL,
           .authmode = WIFI_AUTH_WPA2_PSK,
+          .pmf_cfg = {
+              .capable = true,
+              .required = false,
+          },
       },
   };
 
@@ -293,10 +340,19 @@ static void wifi_app_task(void *pvParameters)
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &s_ap_config));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_sta_config));
   ESP_ERROR_CHECK(esp_wifi_start());
+
+  esp_err_t txp_err = esp_wifi_set_max_tx_power(WIFI_AP_MAX_TX_POWER_QDBM);
+  if (txp_err != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Failed to set AP max TX power (%d qdBm): %s",
+             WIFI_AP_MAX_TX_POWER_QDBM, esp_err_to_name(txp_err));
+  }
+
   WIFI_APP_LOG_STACK_MARGIN("after esp_wifi_start");
 
-  ESP_LOGI(TAG, "WiFi AP ready. Connect to SSID \"%s\" with password \"%s\"",
-           WIFI_AP_SSID, WIFI_AP_PASSWORD);
+  ESP_LOGI(TAG, "WiFi AP ready. SSID: \"%s\"", WIFI_AP_SSID);
+  ESP_LOGI(TAG, "AP channel: %u, country: %s, max TX power: %d qdBm",
+           WIFI_AP_CHANNEL, WIFI_COUNTRY_CODE, WIFI_AP_MAX_TX_POWER_QDBM);
   ESP_LOGI(TAG, "AP IP: %s", WIFI_AP_IP);
 
   // Auto-connect STA only after AP is confirmed up and saved credentials exist.

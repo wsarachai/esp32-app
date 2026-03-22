@@ -15,7 +15,7 @@ esp_err_t http_server_start(void)
   }
 
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_uri_handlers = 20;
+  config.max_uri_handlers = 28;
 
   ESP_LOGI(TAG, "Starting HTTP server on port %d", config.server_port);
   esp_err_t err = httpd_start(&s_server, &config);

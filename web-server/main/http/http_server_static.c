@@ -70,6 +70,33 @@ static esp_err_t root_get_handler(httpd_req_t *req)
   return http_server_index_html_handler(req);
 }
 
+static esp_err_t http_server_android_generate_204_handler(httpd_req_t *req)
+{
+  httpd_resp_set_status(req, "204 No Content");
+  return httpd_resp_send(req, NULL, 0);
+}
+
+static esp_err_t http_server_ncsi_txt_handler(httpd_req_t *req)
+{
+  static const char kWindowsNcsi[] = "Microsoft NCSI";
+  httpd_resp_set_type(req, "text/plain");
+  return httpd_resp_send(req, kWindowsNcsi, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t http_server_connecttest_txt_handler(httpd_req_t *req)
+{
+  static const char kWindowsConnectTest[] = "Microsoft Connect Test";
+  httpd_resp_set_type(req, "text/plain");
+  return httpd_resp_send(req, kWindowsConnectTest, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t http_server_hotspot_detect_handler(httpd_req_t *req)
+{
+  static const char kAppleHotspotDetect[] = "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>";
+  httpd_resp_set_type(req, "text/html");
+  return httpd_resp_send(req, kAppleHotspotDetect, HTTPD_RESP_USE_STRLEN);
+}
+
 esp_err_t http_server_register_static_handlers(httpd_handle_t server)
 {
   httpd_uri_t root_uri = {
@@ -126,5 +153,65 @@ esp_err_t http_server_register_static_handlers(httpd_handle_t server)
       .handler = http_server_favicon_ico_handler,
       .user_ctx = NULL,
   };
-  return httpd_register_uri_handler(server, &favicon_ico);
+  err = httpd_register_uri_handler(server, &favicon_ico);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t android_generate_204 = {
+      .uri = "/generate_204",
+      .method = HTTP_GET,
+      .handler = http_server_android_generate_204_handler,
+      .user_ctx = NULL,
+  };
+  err = httpd_register_uri_handler(server, &android_generate_204);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t android_gen_204 = {
+      .uri = "/gen_204",
+      .method = HTTP_GET,
+      .handler = http_server_android_generate_204_handler,
+      .user_ctx = NULL,
+  };
+  err = httpd_register_uri_handler(server, &android_gen_204);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t windows_ncsi = {
+      .uri = "/ncsi.txt",
+      .method = HTTP_GET,
+      .handler = http_server_ncsi_txt_handler,
+      .user_ctx = NULL,
+  };
+  err = httpd_register_uri_handler(server, &windows_ncsi);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t windows_connecttest = {
+      .uri = "/connecttest.txt",
+      .method = HTTP_GET,
+      .handler = http_server_connecttest_txt_handler,
+      .user_ctx = NULL,
+  };
+  err = httpd_register_uri_handler(server, &windows_connecttest);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t apple_hotspot = {
+      .uri = "/hotspot-detect.html",
+      .method = HTTP_GET,
+      .handler = http_server_hotspot_detect_handler,
+      .user_ctx = NULL,
+  };
+  return httpd_register_uri_handler(server, &apple_hotspot);
 }

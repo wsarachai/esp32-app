@@ -6,6 +6,7 @@
 
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_wifi.h"
 #include "relay.h"
 #include "sensor_cache.h"
 #include "time_sync.h"
@@ -18,6 +19,7 @@ static const char TAG[] = "http_server_status";
 
 #define SENSOR_UPDATE_MAX_BODY_LEN 256
 #define WEB_SESSION_ID_MAX_LEN 64
+#define WEB_DEVICE_ID_MAX_LEN 64
 #define WEB_SESSION_MAX_CLIENTS 16
 #define WEB_SESSION_TIMEOUT_US (30LL * 1000LL * 1000LL)
 
@@ -25,10 +27,22 @@ typedef struct
 {
   bool in_use;
   char session_id[WEB_SESSION_ID_MAX_LEN];
+  char device_id[WEB_DEVICE_ID_MAX_LEN];
   int64_t last_seen_us;
 } web_session_t;
 
 static web_session_t s_web_sessions[WEB_SESSION_MAX_CLIENTS] = {0};
+
+static uint8_t get_ap_station_connected_count(void)
+{
+  wifi_sta_list_t sta_list = {0};
+  if (esp_wifi_ap_get_sta_list(&sta_list) == ESP_OK)
+  {
+    return (uint8_t)sta_list.num;
+  }
+  // Fall back to event-derived count if snapshot is temporarily unavailable.
+  return wifi_app_get_ap_station_connected_count();
+}
 
 static uint8_t web_session_count_active(int64_t now_us)
 {
@@ -44,6 +58,7 @@ static uint8_t web_session_count_active(int64_t now_us)
     {
       s_web_sessions[i].in_use = false;
       s_web_sessions[i].session_id[0] = '\0';
+      s_web_sessions[i].device_id[0] = '\0';
       s_web_sessions[i].last_seen_us = 0;
       continue;
     }
@@ -53,9 +68,9 @@ static uint8_t web_session_count_active(int64_t now_us)
   return active_count;
 }
 
-static void web_session_touch(const char *session_id)
+static void web_session_touch(const char *session_id, const char *device_id)
 {
-  if (session_id == NULL || session_id[0] == '\0')
+  if (session_id == NULL || session_id[0] == '\0' || device_id == NULL || device_id[0] == '\0')
   {
     return;
   }
@@ -72,6 +87,7 @@ static void web_session_touch(const char *session_id)
     }
     if (strncmp(s_web_sessions[i].session_id, session_id, WEB_SESSION_ID_MAX_LEN) == 0)
     {
+      strlcpy(s_web_sessions[i].device_id, device_id, sizeof(s_web_sessions[i].device_id));
       s_web_sessions[i].last_seen_us = now_us;
       return;
     }
@@ -84,6 +100,7 @@ static void web_session_touch(const char *session_id)
     {
       s_web_sessions[i].in_use = true;
       strlcpy(s_web_sessions[i].session_id, session_id, sizeof(s_web_sessions[i].session_id));
+      strlcpy(s_web_sessions[i].device_id, device_id, sizeof(s_web_sessions[i].device_id));
       s_web_sessions[i].last_seen_us = now_us;
       return;
     }
@@ -103,28 +120,89 @@ static void web_session_touch(const char *session_id)
 
   s_web_sessions[oldest_idx].in_use = true;
   strlcpy(s_web_sessions[oldest_idx].session_id, session_id, sizeof(s_web_sessions[oldest_idx].session_id));
+  strlcpy(s_web_sessions[oldest_idx].device_id, device_id, sizeof(s_web_sessions[oldest_idx].device_id));
   s_web_sessions[oldest_idx].last_seen_us = now_us;
 }
 
-static uint8_t web_session_get_connected_count(void)
+static void web_session_remove(const char *session_id)
+{
+  if (session_id == NULL || session_id[0] == '\0')
+  {
+    return;
+  }
+
+  for (size_t i = 0; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (!s_web_sessions[i].in_use)
+    {
+      continue;
+    }
+
+    if (strncmp(s_web_sessions[i].session_id, session_id, WEB_SESSION_ID_MAX_LEN) == 0)
+    {
+      s_web_sessions[i].in_use = false;
+      s_web_sessions[i].session_id[0] = '\0';
+      s_web_sessions[i].device_id[0] = '\0';
+      s_web_sessions[i].last_seen_us = 0;
+      return;
+    }
+  }
+}
+
+static uint8_t web_session_get_active_session_count(void)
 {
   return web_session_count_active(esp_timer_get_time());
 }
 
-static esp_err_t web_session_get_header_id(httpd_req_t *req, char *out_id, size_t out_id_size)
+static uint8_t web_session_get_connected_count(void)
 {
-  if (req == NULL || out_id == NULL || out_id_size < 2)
+  int64_t now_us = esp_timer_get_time();
+  web_session_count_active(now_us);
+
+  char seen_devices[WEB_SESSION_MAX_CLIENTS][WEB_DEVICE_ID_MAX_LEN] = {0};
+  uint8_t seen_count = 0;
+
+  for (size_t i = 0; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (!s_web_sessions[i].in_use || s_web_sessions[i].device_id[0] == '\0')
+    {
+      continue;
+    }
+
+    bool already_seen = false;
+    for (size_t j = 0; j < seen_count; j++)
+    {
+      if (strncmp(seen_devices[j], s_web_sessions[i].device_id, WEB_DEVICE_ID_MAX_LEN) == 0)
+      {
+        already_seen = true;
+        break;
+      }
+    }
+
+    if (!already_seen && seen_count < WEB_SESSION_MAX_CLIENTS)
+    {
+      strlcpy(seen_devices[seen_count], s_web_sessions[i].device_id, WEB_DEVICE_ID_MAX_LEN);
+      seen_count++;
+    }
+  }
+
+  return seen_count;
+}
+
+static esp_err_t web_session_get_header_value(httpd_req_t *req, const char *header_name, char *out_value, size_t out_value_size)
+{
+  if (req == NULL || header_name == NULL || out_value == NULL || out_value_size < 2)
   {
     return ESP_ERR_INVALID_ARG;
   }
 
-  size_t value_len = httpd_req_get_hdr_value_len(req, "X-Web-Session-Id");
-  if (value_len == 0 || value_len >= out_id_size)
+  size_t value_len = httpd_req_get_hdr_value_len(req, header_name);
+  if (value_len == 0 || value_len >= out_value_size)
   {
     return ESP_ERR_INVALID_SIZE;
   }
 
-  if (httpd_req_get_hdr_value_str(req, "X-Web-Session-Id", out_id, out_id_size) != ESP_OK)
+  if (httpd_req_get_hdr_value_str(req, header_name, out_value, out_value_size) != ESP_OK)
   {
     return ESP_FAIL;
   }
@@ -327,16 +405,17 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   bool sensor_data_available = http_server_monitor_is_sensor_data_available();
   uint8_t online_node_count = http_server_monitor_online_node_count();
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
+  uint8_t ap_station_connected_count = get_ap_station_connected_count();
   uint8_t web_connected_count = web_session_get_connected_count();
 
   char time_buf[32];
   time_sync_get_local_time(time_buf, sizeof(time_buf));
 
-    char json_response[520];
+    char json_response[560];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u,\"web-connected\":%u}",
+      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u,\"ap-station-connected\":%u,\"web-connected\":%u}",
       time_buf,
       snapshot.temperature,
       snapshot.humidity,
@@ -349,6 +428,7 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
       sensor_data_available ? "true" : "false",
       (unsigned int)online_node_count,
       (unsigned int)registered_node_count,
+      (unsigned int)ap_station_connected_count,
       (unsigned int)web_connected_count);
 
   if (written < 0 || written >= (int)sizeof(json_response))
@@ -440,20 +520,69 @@ static esp_err_t http_server_local_time_handler(httpd_req_t *req)
 static esp_err_t http_server_web_session_heartbeat_handler(httpd_req_t *req)
 {
   char session_id[WEB_SESSION_ID_MAX_LEN];
-  if (web_session_get_header_id(req, session_id, sizeof(session_id)) != ESP_OK)
+  char device_id[WEB_DEVICE_ID_MAX_LEN];
+  if (web_session_get_header_value(req, "X-Web-Session-Id", session_id, sizeof(session_id)) != ESP_OK ||
+      web_session_get_header_value(req, "X-Web-Device-Id", device_id, sizeof(device_id)) != ESP_OK)
   {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing X-Web-Session-Id header");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing session headers");
     return ESP_FAIL;
   }
 
-  web_session_touch(session_id);
+  web_session_touch(session_id, device_id);
 
   uint8_t web_connected_count = web_session_get_connected_count();
+  uint8_t web_session_count = web_session_get_active_session_count();
   char json_response[96];
   int written = snprintf(json_response,
                          sizeof(json_response),
-                         "{\"status\":\"ok\",\"web-connected\":%u}",
-                         (unsigned int)web_connected_count);
+                         "{\"status\":\"ok\",\"web-connected\":%u,\"web-sessions\":%u}",
+                         (unsigned int)web_connected_count,
+                         (unsigned int)web_session_count);
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t http_server_web_session_close_handler(httpd_req_t *req)
+{
+  if (req->content_len <= 0 || req->content_len > SENSOR_UPDATE_MAX_BODY_LEN)
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid close payload size");
+    return ESP_FAIL;
+  }
+
+  char body[SENSOR_UPDATE_MAX_BODY_LEN];
+  int recv_len = httpd_req_recv(req, body, req->content_len);
+  if (recv_len <= 0)
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to read close payload");
+    return ESP_FAIL;
+  }
+  body[recv_len] = '\0';
+
+  char session_id[WEB_SESSION_ID_MAX_LEN] = {0};
+  if (!parse_json_string_field(body, "session_id", session_id, sizeof(session_id)))
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing session_id in payload");
+    return ESP_FAIL;
+  }
+
+  web_session_remove(session_id);
+
+  uint8_t web_connected_count = web_session_get_connected_count();
+  uint8_t web_session_count = web_session_get_active_session_count();
+  char json_response[96];
+  int written = snprintf(json_response,
+                         sizeof(json_response),
+                         "{\"status\":\"closed\",\"web-connected\":%u,\"web-sessions\":%u}",
+                         (unsigned int)web_connected_count,
+                         (unsigned int)web_session_count);
   if (written < 0 || written >= (int)sizeof(json_response))
   {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
@@ -469,17 +598,21 @@ static esp_err_t http_server_client_info_handler(httpd_req_t *req)
 {
   uint8_t online_node_count = http_server_monitor_online_node_count();
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
+  uint8_t ap_station_connected_count = get_ap_station_connected_count();
   uint8_t web_connected_count = web_session_get_connected_count();
+  uint8_t web_session_count = web_session_get_active_session_count();
 
-  char json_response[128];
+  char json_response[176];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"online-nodes\":%u,\"registered-nodes\":%u,\"web-connected\":%u,\"web-total\":%u}",
+      "{\"online-nodes\":%u,\"registered-nodes\":%u,\"ap-station-connected\":%u,\"web-connected\":%u,\"web-total\":%u,\"web-sessions\":%u}",
       (unsigned int)online_node_count,
       (unsigned int)registered_node_count,
+      (unsigned int)ap_station_connected_count,
       (unsigned int)web_connected_count,
-      (unsigned int)web_connected_count);
+      (unsigned int)web_connected_count,
+      (unsigned int)web_session_count);
 
   if (written < 0 || written >= (int)sizeof(json_response))
   {
@@ -560,5 +693,17 @@ esp_err_t http_server_register_status_handlers(httpd_handle_t server)
       .handler = http_server_web_session_heartbeat_handler,
       .user_ctx = NULL,
   };
-  return httpd_register_uri_handler(server, &web_session_heartbeat);
+  err = httpd_register_uri_handler(server, &web_session_heartbeat);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t web_session_close = {
+      .uri = "/webSessionClose.json",
+      .method = HTTP_POST,
+      .handler = http_server_web_session_close_handler,
+      .user_ctx = NULL,
+  };
+  return httpd_register_uri_handler(server, &web_session_close);
 }

@@ -576,6 +576,15 @@ ConnectivityInfo.prototype.createBodyInfo = function () {
   });
   clientNodeInfo.appendChild(this.clientNodeStatus);
 
+  // AP Station Info
+  const apStationInfo = createElement("div", { class: "client-info" });
+  apStationInfo.appendChild(createElement("label", {}, "AP Clients:"));
+  this.apStationStatus = createElement("span", {
+    id: "ap-station-status",
+    class: "data",
+  });
+  apStationInfo.appendChild(this.apStationStatus);
+
   // Web Connection Info
   const webConnectionInfo = createElement("div", { class: "client-info" });
   webConnectionInfo.appendChild(createElement("label", {}, "การเชื่อมต่อ Web:"));
@@ -585,8 +594,19 @@ ConnectivityInfo.prototype.createBodyInfo = function () {
   });
   webConnectionInfo.appendChild(this.webConnectionStatus);
 
+  // Web Session Info
+  const webSessionInfo = createElement("div", { class: "client-info" });
+  webSessionInfo.appendChild(createElement("label", {}, "Web Sessions:"));
+  this.webSessionStatus = createElement("span", {
+    id: "web-session-status",
+    class: "data",
+  });
+  webSessionInfo.appendChild(this.webSessionStatus);
+
   this.appendChild(clientNodeInfo);
+  this.appendChild(apStationInfo);
   this.appendChild(webConnectionInfo);
+  this.appendChild(webSessionInfo);
 };
 
 ConnectivityInfo.prototype.setSSID = function (ssid) {
@@ -604,10 +624,12 @@ ConnectivityInfo.prototype.getSSID = function () {
 ConnectivityInfo.prototype.getClientInfo = function () {
   function payload(data) {
     this.setClientNodeStatus(data["online-nodes"], data["registered-nodes"]);
+    this.setApStationStatus(data["ap-station-connected"]);
     this.setWebConnectionStatus(
       data["web-connected"],
       data["web-total"] || data["web-connected"]
     );
+    this.setWebSessionStatus(data["web-sessions"]);
   }
 
   fetch("/clientInfo.json", {
@@ -623,8 +645,16 @@ ConnectivityInfo.prototype.setClientNodeStatus = function (onlineCount, register
   this.clientNodeStatus.innerHTML = onlineCount + " / " + registeredCount;
 };
 
+ConnectivityInfo.prototype.setApStationStatus = function (apStationCount) {
+  this.apStationStatus.innerHTML = apStationCount;
+};
+
 ConnectivityInfo.prototype.setWebConnectionStatus = function (connectedCount, totalCount) {
   this.webConnectionStatus.innerHTML = connectedCount + " / " + totalCount;
+};
+
+ConnectivityInfo.prototype.setWebSessionStatus = function (sessionCount) {
+  this.webSessionStatus.innerHTML = sessionCount;
 };
 
 ////////////////////////////////////////
@@ -1081,7 +1111,10 @@ FirmwareUpdate.prototype.getUpdateStatus = function () {
 ////////////////////////////////////////
 let mainContainer = null;
 const SERVER_UNAVAILABLE_TIMEOUT_MS = 15000;
-const WEB_SESSION_HEARTBEAT_INTERVAL_MS = 10000;
+const WEB_SESSION_HEARTBEAT_INTERVAL_MS = 15000;
+const CLIENT_INFO_POLL_INTERVAL_MS = 15000;
+const STATUS_POLL_INTERVAL_MS = 10000;
+const WEB_DEVICE_ID_STORAGE_KEY = "web_device_id";
 let serverLastSeenAtMs = Date.now();
 
 function createWebSessionId() {
@@ -1091,16 +1124,51 @@ function createWebSessionId() {
   return "ws-" + Date.now() + "-" + Math.random().toString(16).slice(2);
 }
 
-function sendWebSessionHeartbeat(sessionId) {
+function getOrCreateWebDeviceId() {
+  try {
+    let deviceId = window.localStorage.getItem(WEB_DEVICE_ID_STORAGE_KEY);
+    if (!deviceId) {
+      deviceId = createWebSessionId();
+      window.localStorage.setItem(WEB_DEVICE_ID_STORAGE_KEY, deviceId);
+    }
+    return deviceId;
+  } catch (e) {
+    // If localStorage is blocked, fall back to per-page ID.
+    return createWebSessionId();
+  }
+}
+
+function sendWebSessionHeartbeat(sessionId, deviceId) {
   return fetch("/webSession.json", {
     method: "POST",
     cache: "no-cache",
     headers: {
       "X-Web-Session-Id": sessionId,
+      "X-Web-Device-Id": deviceId,
     },
   }).catch((error) => {
     console.warn("Failed to send web session heartbeat", error);
   });
+}
+
+function closeWebSession(sessionId) {
+  const payload = JSON.stringify({ session_id: sessionId });
+
+  if (navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: "application/json" });
+    navigator.sendBeacon("/webSessionClose.json", blob);
+    return;
+  }
+
+  fetch("/webSessionClose.json", {
+    method: "POST",
+    cache: "no-cache",
+    keepalive: true,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: payload,
+  }).catch(() => { });
 }
 
 function setWebDisabled(disabled) {
@@ -1185,16 +1253,25 @@ $(document).ready(function () {
   const wifiConnection = new WiFiConnection(wifiConnectionInfo);
   const firmwareUpdate = new FirmwareUpdate();
   const webSessionId = createWebSessionId();
+  const webDeviceId = getOrCreateWebDeviceId();
 
   $(relayControl.relayButton).hide();
   relayControl.getRelayStatus();
-  sendWebSessionHeartbeat(webSessionId);
+  sendWebSessionHeartbeat(webSessionId, webDeviceId);
   setInterval(function () {
-    sendWebSessionHeartbeat(webSessionId);
+    sendWebSessionHeartbeat(webSessionId, webDeviceId);
   }, WEB_SESSION_HEARTBEAT_INTERVAL_MS);
+
+  window.addEventListener("pagehide", function () {
+    closeWebSession(webSessionId);
+  });
+
+  window.addEventListener("beforeunload", function () {
+    closeWebSession(webSessionId);
+  });
   ssidInfo.getSSID();
   ssidInfo.getClientInfo();
-  setInterval(ssidInfo.getClientInfo.bind(ssidInfo), 10000);
+  setInterval(ssidInfo.getClientInfo.bind(ssidInfo), CLIENT_INFO_POLL_INTERVAL_MS);
   firmwareUpdate.getUpdateStatus();
 
   mainContainer.appendChild(generalInfo);
@@ -1213,6 +1290,6 @@ $(document).ready(function () {
     wifiConnectionInfo
   );
   getESPServerStatusBind();
-  setInterval(getESPServerStatusBind, 5000);
+  setInterval(getESPServerStatusBind, STATUS_POLL_INTERVAL_MS);
   setInterval(checkServerAvailabilityTimeout, 1000);
 });
