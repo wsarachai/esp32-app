@@ -6,8 +6,8 @@
 
 typedef enum
 {
-    APP_MSG_WIFI_CONNECTED_GOT_IP = 0,
-    APP_MSG_WIFI_DISCONNECTED,
+    APP_MSG_BT_CONNECTED = 0,
+    APP_MSG_BT_DISCONNECTED,
 } app_event_id_t;
 
 typedef struct

@@ -11,7 +11,7 @@ typedef enum
   WIFI_APP_MSG_STA_CONNECTED,
   WIFI_APP_MSG_STA_DISCONNECTED,
   WIFI_APP_MSG_CONNECTING_FROM_HTTP_SERVER,
-  APP_MSG_SENSOR_DATA_RECEIVED,
+  APP_MSG_SENSOR_DATA_RECEIVED,  /**< Sensor data received (HTTP or BLE) */
 } app_event_id_t;
 
 typedef struct

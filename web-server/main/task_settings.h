@@ -30,4 +30,8 @@
 #define IRRIGATION_TASK_PRIORITY (TASK_PRIORITY_DEFAULT - 1)
 #define IRRIGATION_TASK_CORE_ID 1
 
+// NimBLE host task settings
+// NimBLE host task requires ~5 KB stack (ble_hs_rx_entry + TLV processing).
+#define BT_HOST_TASK_STACK_SIZE 5120
+
 #endif // TASK_SETTINGS_H

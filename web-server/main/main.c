@@ -13,6 +13,7 @@
 #include "time_sync.h"
 #include "wifi_app.h"
 #include "http_server_monitor.h"
+#include "bt_sensor_server.h"
 #include "main.h"
 
 // Tag used for ESP serial console messages
@@ -187,6 +188,12 @@ void app_main(void)
   if (sensor_cache_status != ESP_OK)
   {
     ESP_LOGE(TAG, "Sensor cache task start failed: %s", esp_err_to_name(sensor_cache_status));
+  }
+
+  esp_err_t bt_status = bt_sensor_server_start();
+  if (bt_status != ESP_OK)
+  {
+    ESP_LOGE(TAG, "BLE sensor server start failed: %s", esp_err_to_name(bt_status));
   }
 
   esp_err_t irrigation_status = irrigation_ctrl_start();

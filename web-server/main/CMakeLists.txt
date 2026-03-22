@@ -10,5 +10,6 @@ idf_component_register(SRCS "actuators/relay.c" "actuators/irrigation_ctrl.c" "h
                              "network/wifi_app.c"
                              "network/time_sync.c"
                              "actuators/rgb-led.c"
-                    INCLUDE_DIRS "." "http" "network" "storage" "sensors" "actuators"
+                             "bluetooth/bt_sensor_server.c"
+                    INCLUDE_DIRS "." "http" "network" "storage" "sensors" "actuators" "bluetooth"
                     EMBED_FILES "webpage/app.css" "webpage/app.js" "webpage/favicon.ico" "webpage/index.html" "webpage/jquery-3.3.1.min.js")

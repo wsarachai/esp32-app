@@ -7,9 +7,9 @@
 #include "freertos/task.h"
 
 #include "main.h"
+#include "bt_sensor_client.h"
 #include "sensor_task.h"
 #include "task_settings.h"
-#include "wifi_sta.h"
 
 static const char TAG[] = "main";
 
@@ -61,7 +61,7 @@ BaseType_t app_send_message(app_event_id_t event_id)
 static void main_task(void *pvParameters)
 {
     (void)pvParameters;
-    bool wifi_connected = false;
+    bool bt_connected = false;
     bool led_on = false;
     TickType_t last_blink_tick = xTaskGetTickCount();
 
@@ -73,9 +73,15 @@ static void main_task(void *pvParameters)
         return;
     }
 
-    wifi_sta_start();
-    sensor_task_start();
     status_led_init();
+
+    esp_err_t bt_err = bt_sensor_client_start();
+    if (bt_err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Bluetooth client init failed: %s", esp_err_to_name(bt_err));
+    }
+
+    sensor_task_start();
 
     while (1)
     {
@@ -84,17 +90,17 @@ static void main_task(void *pvParameters)
         {
             switch (event.event_id)
             {
-            case APP_MSG_WIFI_CONNECTED_GOT_IP:
-                ESP_LOGI(TAG, "APP_MSG_WIFI_CONNECTED_GOT_IP");
-                wifi_connected = true;
+            case APP_MSG_BT_CONNECTED:
+                ESP_LOGI(TAG, "APP_MSG_BT_CONNECTED");
+                bt_connected = true;
                 led_on = false;
                 last_blink_tick = xTaskGetTickCount();
                 status_led_set(led_on);
                 break;
 
-            case APP_MSG_WIFI_DISCONNECTED:
-                ESP_LOGW(TAG, "APP_MSG_WIFI_DISCONNECTED");
-                wifi_connected = false;
+            case APP_MSG_BT_DISCONNECTED:
+                ESP_LOGW(TAG, "APP_MSG_BT_DISCONNECTED");
+                bt_connected = false;
                 led_on = false;
                 status_led_set(false);
                 break;
@@ -104,7 +110,7 @@ static void main_task(void *pvParameters)
             }
         }
 
-        if (wifi_connected)
+        if (bt_connected)
         {
             TickType_t now = xTaskGetTickCount();
             if ((now - last_blink_tick) >= pdMS_TO_TICKS(STATUS_LED_BLINK_INTERVAL_MS))

@@ -6,9 +6,9 @@
 /**
  * @brief Starts the sensor FreeRTOS task.
  *        The task reads DHT22 (temperature + humidity) and soil moisture ADC
- *        every SENSOR_POLL_INTERVAL_MS milliseconds, then POSTs the readings
- *        as JSON to the web-server via http_client_post_sensor_data().
- *        Safe to call multiple times — subsequent calls are no-ops.
+ *        every SENSOR_POLL_INTERVAL_MS milliseconds, then sends the readings
+ *        to the Bluetooth GATT server. Safe to call multiple times -
+ *        subsequent calls are no-ops.
  */
 esp_err_t sensor_task_start(void);
 
