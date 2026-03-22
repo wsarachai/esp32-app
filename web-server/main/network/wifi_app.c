@@ -23,6 +23,114 @@ static wifi_config_t s_sta_config;
 static wifi_init_config_t s_wifi_init_config;
 static volatile uint8_t s_sta_connect_status = WIFI_STA_CONNECT_STATUS_IDLE;
 
+static const char *wifi_authmode_to_str(wifi_auth_mode_t authmode)
+{
+  switch (authmode)
+  {
+  case WIFI_AUTH_OPEN:
+    return "OPEN";
+  case WIFI_AUTH_WEP:
+    return "WEP";
+  case WIFI_AUTH_WPA_PSK:
+    return "WPA_PSK";
+  case WIFI_AUTH_WPA2_PSK:
+    return "WPA2_PSK";
+  case WIFI_AUTH_WPA_WPA2_PSK:
+    return "WPA_WPA2_PSK";
+  case WIFI_AUTH_WPA2_ENTERPRISE:
+    return "WPA2_ENTERPRISE";
+  case WIFI_AUTH_WPA3_PSK:
+    return "WPA3_PSK";
+  case WIFI_AUTH_WPA2_WPA3_PSK:
+    return "WPA2_WPA3_PSK";
+  default:
+    return "OTHER";
+  }
+}
+
+static const char *wifi_disconnect_reason_to_str(uint8_t reason)
+{
+  switch (reason)
+  {
+  case WIFI_REASON_AUTH_EXPIRE:
+    return "AUTH_EXPIRE";
+  case WIFI_REASON_AUTH_FAIL:
+    return "AUTH_FAIL";
+  case WIFI_REASON_ASSOC_FAIL:
+    return "ASSOC_FAIL";
+  case WIFI_REASON_HANDSHAKE_TIMEOUT:
+    return "HANDSHAKE_TIMEOUT";
+  case WIFI_REASON_CONNECTION_FAIL:
+    return "CONNECTION_FAIL";
+  case WIFI_REASON_NO_AP_FOUND:
+    return "NO_AP_FOUND";
+  default:
+    return "OTHER";
+  }
+}
+
+static void wifi_log_target_ap_visibility(const uint8_t *target_ssid)
+{
+  if (target_ssid == NULL || target_ssid[0] == '\0')
+  {
+    return;
+  }
+
+  wifi_scan_config_t scan_cfg = {0};
+  esp_err_t err = esp_wifi_scan_start(&scan_cfg, true);
+  if (err != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Scan failed before STA connect: %s", esp_err_to_name(err));
+    return;
+  }
+
+  uint16_t ap_count = 0;
+  err = esp_wifi_scan_get_ap_num(&ap_count);
+  if (err != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Scan AP count failed: %s", esp_err_to_name(err));
+    return;
+  }
+
+  if (ap_count == 0)
+  {
+    ESP_LOGW(TAG, "Scan found no APs before STA connect");
+    return;
+  }
+
+  uint16_t max_records = ap_count;
+  if (max_records > 20)
+  {
+    max_records = 20;
+  }
+
+  wifi_ap_record_t records[20];
+  memset(records, 0, sizeof(records));
+
+  err = esp_wifi_scan_get_ap_records(&max_records, records);
+  if (err != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Scan record fetch failed: %s", esp_err_to_name(err));
+    return;
+  }
+
+  for (uint16_t i = 0; i < max_records; i++)
+  {
+    if (strncmp((const char *)records[i].ssid, (const char *)target_ssid, sizeof(records[i].ssid)) == 0)
+    {
+      ESP_LOGI(TAG, "Target SSID '%s' visible: rssi=%d dBm, ch=%u, auth=%s", (const char *)target_ssid,
+               records[i].rssi,
+               records[i].primary,
+               wifi_authmode_to_str(records[i].authmode));
+      return;
+    }
+  }
+
+  ESP_LOGW(TAG, "Target SSID '%s' not visible in scan (checked %u AP records)",
+           (const char *)target_ssid,
+           (unsigned int)max_records);
+}
+
 /**
  * Wifi application event group handle and status bits
  */
@@ -57,9 +165,12 @@ esp_err_t wifi_app_connect_sta(void)
     return ESP_ERR_INVALID_STATE;
   }
 
-  s_sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-  s_sta_config.sta.pmf_cfg.capable = true;
+  // Keep STA compatibility broad for mixed WPA/WPA2 APs and older routers.
+  s_sta_config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
+  s_sta_config.sta.pmf_cfg.capable = false;
   s_sta_config.sta.pmf_cfg.required = false;
+
+  wifi_log_target_ap_visibility(s_sta_config.sta.ssid);
 
   ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_disconnect());
 
@@ -186,7 +297,17 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       break;
 
     case WIFI_EVENT_STA_DISCONNECTED:
-      ESP_LOGI(TAG, "STA disconnected from AP");
+    {
+      wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)event_data;
+      const char *reason_str = wifi_disconnect_reason_to_str(e->reason);
+      ESP_LOGW(TAG, "STA disconnected from AP (reason=%u:%s)", e->reason, reason_str);
+      if (e->reason == WIFI_REASON_AUTH_EXPIRE ||
+          e->reason == WIFI_REASON_AUTH_FAIL ||
+          e->reason == WIFI_REASON_CONNECTION_FAIL ||
+          e->reason == WIFI_REASON_HANDSHAKE_TIMEOUT)
+      {
+        ESP_LOGW(TAG, "Likely credential/security mismatch. Check SSID/password and AP auth mode.");
+      }
       xEventGroupSetBits(wifi_app_event_group, WIFI_APP_STA_DISCONNECTED_BIT);
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT | WIFI_APP_STA_GOT_IP_BIT);
       if (s_sta_connect_status == WIFI_STA_CONNECT_STATUS_CONNECTING)
@@ -199,6 +320,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       }
       app_send_message(WIFI_APP_MSG_STA_DISCONNECTED);
       break;
+    }
 
     default:
       break;
