@@ -604,7 +604,10 @@ ConnectivityInfo.prototype.getSSID = function () {
 ConnectivityInfo.prototype.getClientInfo = function () {
   function payload(data) {
     this.setClientNodeStatus(data["online-nodes"], data["registered-nodes"]);
-    this.setWebConnectionStatus(data["web-connected"], 1);
+    this.setWebConnectionStatus(
+      data["web-connected"],
+      data["web-total"] || data["web-connected"]
+    );
   }
 
   fetch("/clientInfo.json", {
@@ -1078,7 +1081,27 @@ FirmwareUpdate.prototype.getUpdateStatus = function () {
 ////////////////////////////////////////
 let mainContainer = null;
 const SERVER_UNAVAILABLE_TIMEOUT_MS = 15000;
+const WEB_SESSION_HEARTBEAT_INTERVAL_MS = 10000;
 let serverLastSeenAtMs = Date.now();
+
+function createWebSessionId() {
+  if (window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return "ws-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+}
+
+function sendWebSessionHeartbeat(sessionId) {
+  return fetch("/webSession.json", {
+    method: "POST",
+    cache: "no-cache",
+    headers: {
+      "X-Web-Session-Id": sessionId,
+    },
+  }).catch((error) => {
+    console.warn("Failed to send web session heartbeat", error);
+  });
+}
 
 function setWebDisabled(disabled) {
   if (disabled) {
@@ -1161,9 +1184,14 @@ $(document).ready(function () {
   const wifiConnectionInfo = new WiFiConnectionInfo();
   const wifiConnection = new WiFiConnection(wifiConnectionInfo);
   const firmwareUpdate = new FirmwareUpdate();
+  const webSessionId = createWebSessionId();
 
   $(relayControl.relayButton).hide();
   relayControl.getRelayStatus();
+  sendWebSessionHeartbeat(webSessionId);
+  setInterval(function () {
+    sendWebSessionHeartbeat(webSessionId);
+  }, WEB_SESSION_HEARTBEAT_INTERVAL_MS);
   ssidInfo.getSSID();
   ssidInfo.getClientInfo();
   setInterval(ssidInfo.getClientInfo.bind(ssidInfo), 10000);

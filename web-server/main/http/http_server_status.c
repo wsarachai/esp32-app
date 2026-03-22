@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "relay.h"
 #include "sensor_cache.h"
 #include "time_sync.h"
@@ -16,6 +17,120 @@
 static const char TAG[] = "http_server_status";
 
 #define SENSOR_UPDATE_MAX_BODY_LEN 256
+#define WEB_SESSION_ID_MAX_LEN 64
+#define WEB_SESSION_MAX_CLIENTS 16
+#define WEB_SESSION_TIMEOUT_US (30LL * 1000LL * 1000LL)
+
+typedef struct
+{
+  bool in_use;
+  char session_id[WEB_SESSION_ID_MAX_LEN];
+  int64_t last_seen_us;
+} web_session_t;
+
+static web_session_t s_web_sessions[WEB_SESSION_MAX_CLIENTS] = {0};
+
+static uint8_t web_session_count_active(int64_t now_us)
+{
+  uint8_t active_count = 0;
+  for (size_t i = 0; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (!s_web_sessions[i].in_use)
+    {
+      continue;
+    }
+
+    if ((now_us - s_web_sessions[i].last_seen_us) > WEB_SESSION_TIMEOUT_US)
+    {
+      s_web_sessions[i].in_use = false;
+      s_web_sessions[i].session_id[0] = '\0';
+      s_web_sessions[i].last_seen_us = 0;
+      continue;
+    }
+
+    active_count++;
+  }
+  return active_count;
+}
+
+static void web_session_touch(const char *session_id)
+{
+  if (session_id == NULL || session_id[0] == '\0')
+  {
+    return;
+  }
+
+  int64_t now_us = esp_timer_get_time();
+  web_session_count_active(now_us);
+
+  // Refresh existing session if present.
+  for (size_t i = 0; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (!s_web_sessions[i].in_use)
+    {
+      continue;
+    }
+    if (strncmp(s_web_sessions[i].session_id, session_id, WEB_SESSION_ID_MAX_LEN) == 0)
+    {
+      s_web_sessions[i].last_seen_us = now_us;
+      return;
+    }
+  }
+
+  // Add new session in first free slot.
+  for (size_t i = 0; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (!s_web_sessions[i].in_use)
+    {
+      s_web_sessions[i].in_use = true;
+      strlcpy(s_web_sessions[i].session_id, session_id, sizeof(s_web_sessions[i].session_id));
+      s_web_sessions[i].last_seen_us = now_us;
+      return;
+    }
+  }
+
+  // If full, replace the oldest slot.
+  size_t oldest_idx = 0;
+  int64_t oldest_seen = s_web_sessions[0].last_seen_us;
+  for (size_t i = 1; i < WEB_SESSION_MAX_CLIENTS; i++)
+  {
+    if (s_web_sessions[i].last_seen_us < oldest_seen)
+    {
+      oldest_seen = s_web_sessions[i].last_seen_us;
+      oldest_idx = i;
+    }
+  }
+
+  s_web_sessions[oldest_idx].in_use = true;
+  strlcpy(s_web_sessions[oldest_idx].session_id, session_id, sizeof(s_web_sessions[oldest_idx].session_id));
+  s_web_sessions[oldest_idx].last_seen_us = now_us;
+}
+
+static uint8_t web_session_get_connected_count(void)
+{
+  return web_session_count_active(esp_timer_get_time());
+}
+
+static esp_err_t web_session_get_header_id(httpd_req_t *req, char *out_id, size_t out_id_size)
+{
+  if (req == NULL || out_id == NULL || out_id_size < 2)
+  {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  size_t value_len = httpd_req_get_hdr_value_len(req, "X-Web-Session-Id");
+  if (value_len == 0 || value_len >= out_id_size)
+  {
+    return ESP_ERR_INVALID_SIZE;
+  }
+
+  if (httpd_req_get_hdr_value_str(req, "X-Web-Session-Id", out_id, out_id_size) != ESP_OK)
+  {
+    return ESP_FAIL;
+  }
+
+  return ESP_OK;
+}
 
 static bool parse_json_string_field(const char *json, const char *key, char *out, size_t out_size)
 {
@@ -212,7 +327,7 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   bool sensor_data_available = http_server_monitor_is_sensor_data_available();
   uint8_t online_node_count = http_server_monitor_online_node_count();
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
-  uint8_t web_connected_count = 1;
+  uint8_t web_connected_count = web_session_get_connected_count();
 
   char time_buf[32];
   time_sync_get_local_time(time_buf, sizeof(time_buf));
@@ -322,22 +437,48 @@ static esp_err_t http_server_local_time_handler(httpd_req_t *req)
   return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
 }
 
+static esp_err_t http_server_web_session_heartbeat_handler(httpd_req_t *req)
+{
+  char session_id[WEB_SESSION_ID_MAX_LEN];
+  if (web_session_get_header_id(req, session_id, sizeof(session_id)) != ESP_OK)
+  {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing X-Web-Session-Id header");
+    return ESP_FAIL;
+  }
+
+  web_session_touch(session_id);
+
+  uint8_t web_connected_count = web_session_get_connected_count();
+  char json_response[96];
+  int written = snprintf(json_response,
+                         sizeof(json_response),
+                         "{\"status\":\"ok\",\"web-connected\":%u}",
+                         (unsigned int)web_connected_count);
+  if (written < 0 || written >= (int)sizeof(json_response))
+  {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+}
+
 static esp_err_t http_server_client_info_handler(httpd_req_t *req)
 {
   uint8_t online_node_count = http_server_monitor_online_node_count();
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
-  
-  // For web connections, we count 1 for the current browser client
-  // This could be enhanced to track multiple concurrent web connections
-  uint8_t web_connected_count = 1;
+  uint8_t web_connected_count = web_session_get_connected_count();
 
   char json_response[128];
   int written = snprintf(
       json_response,
       sizeof(json_response),
-      "{\"online-nodes\":%u,\"registered-nodes\":%u,\"web-connected\":%u}",
+      "{\"online-nodes\":%u,\"registered-nodes\":%u,\"web-connected\":%u,\"web-total\":%u}",
       (unsigned int)online_node_count,
       (unsigned int)registered_node_count,
+      (unsigned int)web_connected_count,
       (unsigned int)web_connected_count);
 
   if (written < 0 || written >= (int)sizeof(json_response))
@@ -407,5 +548,17 @@ esp_err_t http_server_register_status_handlers(httpd_handle_t server)
       .handler = http_server_client_info_handler,
       .user_ctx = NULL,
   };
-  return httpd_register_uri_handler(server, &client_info);
+  err = httpd_register_uri_handler(server, &client_info);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  httpd_uri_t web_session_heartbeat = {
+      .uri = "/webSession.json",
+      .method = HTTP_POST,
+      .handler = http_server_web_session_heartbeat_handler,
+      .user_ctx = NULL,
+  };
+  return httpd_register_uri_handler(server, &web_session_heartbeat);
 }
