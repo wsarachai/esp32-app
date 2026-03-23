@@ -82,6 +82,12 @@ static void main_task(void *pvParameters)
   relay_init();
   ESP_LOGI(TAG, "Relay initialized");
 
+  esp_err_t time_init_status = time_sync_init();
+  if (time_init_status != ESP_OK)
+  {
+    ESP_LOGW(TAG, "Offline RTC time unavailable during boot: %s", esp_err_to_name(time_init_status));
+  }
+
   wifi_app_start();
   set_led_status(RGB_LED_COLOR_BLUE);
 

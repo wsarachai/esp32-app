@@ -7,6 +7,13 @@
 #include "esp_err.h"
 
 /**
+ * @brief Configure timezone support and restore system time from DS3231 if available.
+ *
+ * Call this once during boot before modules that need a valid wall clock.
+ */
+esp_err_t time_sync_init(void);
+
+/**
  * @brief Initialize SNTP and start polling for the current time.
  *
  * Should be called once after the STA interface obtains an IP address.
@@ -26,11 +33,13 @@ bool time_sync_is_synced(void);
 /**
  * @brief Write the current local time into buf as "HH:MM:SS DD/MM/YYYY".
  *
- * If not yet synchronised, writes "--:--:--" and returns false.
+ * If internet time is not yet available, this falls back to DS3231-backed
+ * system time when possible. If no valid time source exists, writes "--:--:--"
+ * and returns false.
  *
  * @param buf       Destination buffer (at least 24 bytes recommended).
  * @param buf_size  Size of buf.
- * @return true if time is valid, false if still waiting for SNTP sync.
+ * @return true if time is valid, false if no valid time source exists.
  */
 bool time_sync_get_local_time(char *buf, size_t buf_size);
 
