@@ -635,6 +635,8 @@ const WiFiConnection = function (connectionInfo) {
 
     this.connectionInfo = connectionInfo;
     this.wifiConnectInterval = null;
+    this.connectAttemptStartedAt = 0;
+    this.connectFailureGraceMs = 8000;
 
     this.createBodyInfo();
 };
@@ -725,6 +727,9 @@ WiFiConnection.prototype.connectWifi = function () {
     const selectedSSID = $(this.ssidInput).val();
     const pwd = $(this.passwordInput).val();
 
+    this.stopWifiConnectStatusInterval();
+    this.connectAttemptStartedAt = Date.now();
+
     $.ajax({
         url: "/wifiConnect.json",
         dataType: "json",
@@ -742,6 +747,7 @@ WiFiConnection.prototype.startWifiConnectStatusInterval = function () {
         this.getWifiConnectStatus.bind(this),
         2800
     );
+    this.getWifiConnectStatus();
 };
 
 WiFiConnection.prototype.stopWifiConnectStatusInterval = function () {
@@ -759,6 +765,10 @@ WiFiConnection.prototype.getWifiConnectStatus = function () {
         this.connectionStatus.innerHTML = "<h4 class='rd'>Connecting...</h4>";
 
         if (data.wifi_connect_status == 2) {
+            const elapsedMs = Date.now() - this.connectAttemptStartedAt;
+            if (elapsedMs < this.connectFailureGraceMs) {
+                return;
+            }
             this.connectionStatus.innerHTML =
                 "<h4 class='rd'>Failed to Connect. Please check your AP credentials and compatibility</h4>";
             this.stopWifiConnectStatusInterval();

@@ -69,6 +69,22 @@ static const char *wifi_disconnect_reason_to_str(uint8_t reason)
   }
 }
 
+static bool wifi_disconnect_reason_is_connect_failure(uint8_t reason)
+{
+  switch (reason)
+  {
+  case WIFI_REASON_AUTH_EXPIRE:
+  case WIFI_REASON_AUTH_FAIL:
+  case WIFI_REASON_ASSOC_FAIL:
+  case WIFI_REASON_HANDSHAKE_TIMEOUT:
+  case WIFI_REASON_CONNECTION_FAIL:
+  case WIFI_REASON_NO_AP_FOUND:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void wifi_log_target_ap_visibility(const uint8_t *target_ssid)
 {
   if (target_ssid == NULL || target_ssid[0] == '\0')
@@ -172,6 +188,8 @@ esp_err_t wifi_app_connect_sta(void)
 
   wifi_log_target_ap_visibility(s_sta_config.sta.ssid);
 
+  // Mark connecting before disconnecting so UI polling does not keep stale FAILED state.
+  s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
   ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_disconnect());
 
   esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &s_sta_config);
@@ -189,7 +207,6 @@ esp_err_t wifi_app_connect_sta(void)
     return err;
   }
 
-  s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
   ESP_LOGI(TAG, "Started STA connection attempt to SSID: %s", (const char *)s_sta_config.sta.ssid);
   return ESP_OK;
 }
@@ -300,6 +317,7 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
     {
       wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)event_data;
       const char *reason_str = wifi_disconnect_reason_to_str(e->reason);
+      bool is_connect_failure = wifi_disconnect_reason_is_connect_failure(e->reason);
       ESP_LOGW(TAG, "STA disconnected from AP (reason=%u:%s)", e->reason, reason_str);
       if (e->reason == WIFI_REASON_AUTH_EXPIRE ||
           e->reason == WIFI_REASON_AUTH_FAIL ||
@@ -312,7 +330,15 @@ static void wifi_app_event_handler(void *arg, esp_event_base_t event_base,
       xEventGroupClearBits(wifi_app_event_group, WIFI_APP_STA_CONNECTED_BIT | WIFI_APP_STA_GOT_IP_BIT);
       if (s_sta_connect_status == WIFI_STA_CONNECT_STATUS_CONNECTING)
       {
-        s_sta_connect_status = WIFI_STA_CONNECT_STATUS_FAILED;
+        if (is_connect_failure)
+        {
+          s_sta_connect_status = WIFI_STA_CONNECT_STATUS_FAILED;
+        }
+        else
+        {
+          ESP_LOGI(TAG, "Ignoring transient disconnect while connecting (reason=%u)", e->reason);
+          s_sta_connect_status = WIFI_STA_CONNECT_STATUS_CONNECTING;
+        }
       }
       else
       {
