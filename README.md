@@ -157,4 +157,11 @@ idf.py flash monitor
 
 ## License
 
-No explicit license file was found in this repository. Add a `LICENSE` file if you plan to distribute this code.
+This project is intended to be open source and free to use under a **copyleft** model:
+
+- You can use, modify, and distribute the code.
+- If you distribute modified versions, you must also share the source code under the same license terms.
+
+Recommended license: **GNU General Public License v3.0 (GPL-3.0)**.
+
+To complete this, add a `LICENSE` file with the full GPL-3.0 text.
