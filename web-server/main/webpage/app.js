@@ -133,6 +133,7 @@ Section.prototype.appendChild = function (element) {
 ////////////////////////////////////////
 const GeneralInfo = function () {
     Section.call(this, "general-info", "ข้อมูลทั่วไป");
+    this.lastSensorDataTime = "";
 
     this.createSensorInfo();
     setInterval(this.getLocalTime.bind(this), 10000);
@@ -251,14 +252,20 @@ GeneralInfo.prototype.setSoilMoistureReading = function (soilMoisture) {
 };
 
 GeneralInfo.prototype.setNoDataState = function () {
-    this.temperatureReading.innerHTML = "No data";
-    this.humidityReading.innerHTML = "No data";
-    this.soilMoistureReading.innerHTML = "No data";
-    this.humidityBar.setProgress(0);
-    this.soilMoistureBar.setProgress(0);
+    if (this.lastSensorDataTime) {
+        this.setCurrentTime(this.lastSensorDataTime);
+        this.sensorAvailabilityNotice.innerHTML =
+            "No data from server. Showing last values at " +
+            this.lastSensorDataTime;
+    } else {
+        this.sensorAvailabilityNotice.innerHTML = "No data from server yet.";
+    }
 };
 
-GeneralInfo.prototype.setDataAvailableState = function () {
+GeneralInfo.prototype.setDataAvailableState = function (time) {
+    if (time) {
+        this.lastSensorDataTime = time;
+    }
     this.sensorAvailabilityNotice.innerHTML = "";
 };
 
@@ -1142,10 +1149,10 @@ function getESPServerStatus(
     $.getJSON("/ESPServerStatus.json")
         .done(function (data) {
             markServerAvailable();
-            generalInfo.setCurrentTime(data["time"]);
             const sensorDataAvailable = !!data["sensor-data-available"];
             if (sensorDataAvailable) {
-                generalInfo.setDataAvailableState();
+                generalInfo.setDataAvailableState(data["time"]);
+                generalInfo.setCurrentTime(data["time"]);
                 generalInfo.setTemperatureReading(data["temp"]);
                 generalInfo.setHumidityReading(data["humidity"]);
                 generalInfo.setSoilMoistureReading(data["soil-moisture"]);

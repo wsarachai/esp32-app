@@ -20,16 +20,18 @@ esp_err_t http_server_start(void)
   config.backlog_conn = 8;
   config.lru_purge_enable = true;
   config.recv_wait_timeout = 3;
-  config.send_wait_timeout = 3;
+  config.send_wait_timeout = 8;
+  config.keep_alive_enable = false;
 
   ESP_LOGI(TAG,
-           "Starting HTTP server on port %d (max_sockets=%u backlog=%u lru_purge=%s recv_timeout=%us send_timeout=%us)",
+           "Starting HTTP server on port %d (max_sockets=%u backlog=%u lru_purge=%s recv_timeout=%us send_timeout=%us keep_alive=%s)",
            config.server_port,
            (unsigned int)config.max_open_sockets,
            (unsigned int)config.backlog_conn,
            config.lru_purge_enable ? "true" : "false",
            (unsigned int)config.recv_wait_timeout,
-           (unsigned int)config.send_wait_timeout);
+           (unsigned int)config.send_wait_timeout,
+           config.keep_alive_enable ? "true" : "false");
   esp_err_t err = httpd_start(&s_server, &config);
   if (err != ESP_OK)
   {
