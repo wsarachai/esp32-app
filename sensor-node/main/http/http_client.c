@@ -6,6 +6,7 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "rgb_led.h"
 #include "wifi_sta.h"
 
 #define SENSOR_UPDATE_PATH "/sensor-update"
@@ -106,6 +107,7 @@ esp_err_t http_client_post_sensor_data(float temperature, float humidity, float 
         if (status >= 200 && status < 300)
         {
             ESP_LOGI(TAG, "POST %s -> HTTP %d  body=%s", SENSOR_UPDATE_PATH, status, body);
+            rgb_led_flash_success();
         }
         else
         {

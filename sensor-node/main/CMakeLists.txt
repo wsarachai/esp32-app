@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "main.c"
+        "actuators/rgb_led.c"
         "network/wifi_sta.c"
         "sensors/dht22.c"
         "sensors/soil_moisture_adc.c"
@@ -8,6 +9,7 @@ idf_component_register(
         "http/http_client.c"
     INCLUDE_DIRS
         "."
+        "actuators"
         "network"
         "sensors"
         "http"

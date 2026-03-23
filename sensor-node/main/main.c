@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 
 #include "main.h"
+#include "rgb_led.h"
 #include "sensor_task.h"
 #include "task_settings.h"
 #include "wifi_sta.h"
@@ -90,6 +91,7 @@ static void main_task(void *pvParameters)
                 led_on = false;
                 last_blink_tick = xTaskGetTickCount();
                 status_led_set(led_on);
+                rgb_led_set_wifi_connected(true);
                 break;
 
             case APP_MSG_WIFI_DISCONNECTED:
@@ -97,6 +99,7 @@ static void main_task(void *pvParameters)
                 wifi_connected = false;
                 led_on = false;
                 status_led_set(false);
+                rgb_led_set_wifi_connected(false);
                 break;
 
             default:
@@ -121,6 +124,8 @@ void app_main(void)
 {
     // Suppress verbose per-pin config logs from the ESP-IDF GPIO driver.
     esp_log_level_set("gpio", ESP_LOG_WARN);
+
+    rgb_led_init();
 
     xTaskCreatePinnedToCore(
         main_task,
