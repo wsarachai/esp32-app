@@ -15,9 +15,21 @@ esp_err_t http_server_start(void)
   }
 
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_uri_handlers = 20;
+  config.max_uri_handlers = 24;
+  config.max_open_sockets = 7;
+  config.backlog_conn = 8;
+  config.lru_purge_enable = true;
+  config.recv_wait_timeout = 3;
+  config.send_wait_timeout = 3;
 
-  ESP_LOGI(TAG, "Starting HTTP server on port %d", config.server_port);
+  ESP_LOGI(TAG,
+           "Starting HTTP server on port %d (max_sockets=%u backlog=%u lru_purge=%s recv_timeout=%us send_timeout=%us)",
+           config.server_port,
+           (unsigned int)config.max_open_sockets,
+           (unsigned int)config.backlog_conn,
+           config.lru_purge_enable ? "true" : "false",
+           (unsigned int)config.recv_wait_timeout,
+           (unsigned int)config.send_wait_timeout);
   esp_err_t err = httpd_start(&s_server, &config);
   if (err != ESP_OK)
   {
@@ -73,10 +85,8 @@ esp_err_t http_server_start(void)
   err = http_server_monitor_start();
   if (err != ESP_OK)
   {
-    ESP_LOGE(TAG, "Failed to start HTTP monitor task: %s", esp_err_to_name(err));
-    httpd_stop(s_server);
-    s_server = NULL;
-    return err;
+    ESP_LOGW(TAG, "HTTP monitor task failed to start: %s", esp_err_to_name(err));
+    ESP_LOGW(TAG, "Continuing with HTTP server running; monitor is optional");
   }
 
   ESP_LOGI(TAG, "HTTP server started");
