@@ -329,18 +329,68 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
   uint8_t registered_node_count = http_server_monitor_registered_node_count();
   uint8_t web_connected_count = web_session_get_connected_count();
 
+  sensor_device_snapshot_t device_snapshots[SENSOR_CACHE_MAX_DEVICES];
+  size_t device_snapshot_count = 0;
+  if (!sensor_cache_get_device_snapshots(device_snapshots,
+                                         SENSOR_CACHE_MAX_DEVICES,
+                                         &device_snapshot_count))
+  {
+    device_snapshot_count = 0;
+  }
+
   char time_buf[32];
   time_sync_get_local_time(time_buf, sizeof(time_buf));
 
-    char json_response[520];
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+
+  char chunk[384];
   int written = snprintf(
-      json_response,
-      sizeof(json_response),
-      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u,\"web-connected\":%u}",
+      chunk,
+      sizeof(chunk),
+      "{\"time\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f,\"node-snapshots\":[",
       time_buf,
       snapshot.temperature,
       snapshot.humidity,
-      snapshot.soilMoisture,
+      snapshot.soilMoisture);
+  if (written < 0 || written >= (int)sizeof(chunk))
+  {
+    ESP_LOGE(TAG, "Failed to encode status JSON prefix");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+    return ESP_FAIL;
+  }
+  if (httpd_resp_send_chunk(req, chunk, HTTPD_RESP_USE_STRLEN) != ESP_OK)
+  {
+    return ESP_FAIL;
+  }
+
+  for (size_t i = 0; i < device_snapshot_count; i++)
+  {
+    written = snprintf(
+        chunk,
+        sizeof(chunk),
+        "%s{\"device_id\":\"%s\",\"temp\":%.2f,\"humidity\":%.2f,\"soil-moisture\":%.2f}",
+        (i == 0) ? "" : ",",
+        device_snapshots[i].device_id,
+        device_snapshots[i].temperature,
+        device_snapshots[i].humidity,
+        device_snapshots[i].soilMoisture);
+    if (written < 0 || written >= (int)sizeof(chunk))
+    {
+      ESP_LOGE(TAG, "Failed to encode node snapshot JSON");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
+      return ESP_FAIL;
+    }
+    if (httpd_resp_send_chunk(req, chunk, HTTPD_RESP_USE_STRLEN) != ESP_OK)
+    {
+      return ESP_FAIL;
+    }
+  }
+
+  written = snprintf(
+      chunk,
+      sizeof(chunk),
+      "],\"min-moiture-level\":%u,\"max-moiture-level\":%u,\"duration\":%u,\"water-status\":\"OFF\",\"wifi-connect-status\":%u,\"relay-status\":\"%s\",\"sensor-data-available\":%s,\"online-node-count\":%u,\"registered-node-count\":%u,\"web-connected\":%u}",
       (unsigned int)water_cfg.min_moisture_level,
       (unsigned int)water_cfg.max_moisture_level,
       (unsigned int)water_cfg.duration_minutes,
@@ -350,17 +400,18 @@ static esp_err_t http_server_status_handler(httpd_req_t *req)
       (unsigned int)online_node_count,
       (unsigned int)registered_node_count,
       (unsigned int)web_connected_count);
-
-  if (written < 0 || written >= (int)sizeof(json_response))
+  if (written < 0 || written >= (int)sizeof(chunk))
   {
-    ESP_LOGE(TAG, "Failed to create ESPServerStatus JSON response");
+    ESP_LOGE(TAG, "Failed to encode status JSON suffix");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON encoding error");
     return ESP_FAIL;
   }
+  if (httpd_resp_send_chunk(req, chunk, HTTPD_RESP_USE_STRLEN) != ESP_OK)
+  {
+    return ESP_FAIL;
+  }
 
-  httpd_resp_set_type(req, "application/json");
-  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
-  return httpd_resp_send(req, json_response, HTTPD_RESP_USE_STRLEN);
+  return httpd_resp_send_chunk(req, NULL, 0);
 }
 
 static esp_err_t http_server_save_water_config_handler(httpd_req_t *req)

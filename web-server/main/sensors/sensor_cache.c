@@ -12,7 +12,6 @@
 #define SENSOR_DEFAULT_HUMIDITY      0.0f
 #define SENSOR_DEFAULT_TEMPERATURE   0.0f
 #define SENSOR_DEFAULT_SOIL_MOISTURE 50.0f
-#define SENSOR_DEVICE_ID_MAX_LEN     32
 #define SOIL_MOISTURE_MIN            0.0f
 #define SOIL_MOISTURE_MAX            100.0f
 #define SOIL_MOISTURE_EMA_ALPHA      0.20f
@@ -223,6 +222,43 @@ bool sensor_cache_get_stats(sensor_cache_stats_t *stats, uint32_t offline_timeou
     stats->online_devices = online;
     stats->newest_timestamp_us = newest_ts;
 
+    xSemaphoreGive(s_mutex);
+    return true;
+}
+
+bool sensor_cache_get_device_snapshots(sensor_device_snapshot_t *snapshots,
+                                       size_t max_snapshots,
+                                       size_t *out_count)
+{
+    if (snapshots == NULL || out_count == NULL || s_mutex == NULL)
+    {
+        return false;
+    }
+
+    if (xSemaphoreTake(s_mutex, pdMS_TO_TICKS(50)) != pdTRUE)
+    {
+        return false;
+    }
+
+    size_t copied = 0;
+    for (int i = 0; i < SENSOR_CACHE_MAX_DEVICES && copied < max_snapshots; i++)
+    {
+        if (!s_device_table[i].valid)
+        {
+            continue;
+        }
+
+        strncpy(snapshots[copied].device_id, s_device_table[i].device_id, SENSOR_DEVICE_ID_MAX_LEN - 1);
+        snapshots[copied].device_id[SENSOR_DEVICE_ID_MAX_LEN - 1] = '\0';
+        snapshots[copied].temperature = s_device_table[i].temperature;
+        snapshots[copied].humidity = s_device_table[i].humidity;
+        snapshots[copied].soilMoisture = s_device_table[i].soilMoisture;
+        snapshots[copied].valid = s_device_table[i].valid;
+        snapshots[copied].timestamp_us = s_device_table[i].timestamp_us;
+        copied++;
+    }
+
+    *out_count = copied;
     xSemaphoreGive(s_mutex);
     return true;
 }

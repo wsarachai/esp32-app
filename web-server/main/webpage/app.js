@@ -134,9 +134,12 @@ Section.prototype.appendChild = function (element) {
 const GeneralInfo = function () {
     Section.call(this, "general-info", "ข้อมูลทั่วไป");
     this.lastSensorDataTime = "";
+    this.displayEntries = [];
+    this.currentDisplayIndex = 0;
 
     this.createSensorInfo();
     setInterval(this.getLocalTime.bind(this), 10000);
+    setInterval(this.advanceDisplayEntry.bind(this), 3000);
 };
 GeneralInfo.prototype = Object.create(Section.prototype);
 
@@ -158,6 +161,12 @@ GeneralInfo.prototype.createHeader = function () {
 
 GeneralInfo.prototype.createSensorInfo = function () {
     const sensorInfo = createElement("div", { class: "sensor-container" });
+
+    this.sensorDisplaySource = createElement("div", {
+        id: "sensor-display-source",
+        class: "data",
+    });
+    this.sensorDisplaySource.innerHTML = "แสดงข้อมูล: Average";
 
     this.sensorAvailabilityNotice = createElement("div", {
         id: "sensor-availability-notice",
@@ -208,6 +217,7 @@ GeneralInfo.prototype.createSensorInfo = function () {
     sensorInfo.appendChild(temperatureInfo);
     sensorInfo.appendChild(humidityInfo);
     sensorInfo.appendChild(soilMoistureInfo);
+    sensorInfo.appendChild(this.sensorDisplaySource);
     sensorInfo.appendChild(this.sensorAvailabilityNotice);
 
     this.appendChild(sensorInfo);
@@ -267,6 +277,97 @@ GeneralInfo.prototype.setDataAvailableState = function (time) {
         this.lastSensorDataTime = time;
     }
     this.sensorAvailabilityNotice.innerHTML = "";
+};
+
+GeneralInfo.prototype.normalizeReading = function (reading) {
+    if (!reading || typeof reading !== "object") {
+        return null;
+    }
+
+    const temp = reading["temp"];
+    const humidity = reading["humidity"];
+    const soilMoisture = reading["soil-moisture"];
+
+    if (!isFinite(temp) || !isFinite(humidity) || !isFinite(soilMoisture)) {
+        return null;
+    }
+
+    return {
+        temp: parseFloat(temp),
+        humidity: parseFloat(humidity),
+        soilMoisture: parseFloat(soilMoisture),
+    };
+};
+
+GeneralInfo.prototype.updateDisplayEntries = function (averageReading, nodeReadings) {
+    const entries = [];
+    const normalizedAverage = this.normalizeReading(averageReading);
+    if (normalizedAverage) {
+        entries.push({
+            sourceName: "Average",
+            reading: normalizedAverage,
+        });
+    }
+
+    if (Array.isArray(nodeReadings)) {
+        for (let i = 0; i < nodeReadings.length; i++) {
+            const nodeReading = this.normalizeReading(nodeReadings[i]);
+            if (!nodeReading) {
+                continue;
+            }
+
+            const nodeId = nodeReadings[i]["device_id"] || "Unknown";
+            entries.push({
+                sourceName: "Node " + nodeId,
+                reading: nodeReading,
+            });
+        }
+    }
+
+    if (entries.length === 0) {
+        return;
+    }
+
+    const previousSource =
+        this.displayEntries[this.currentDisplayIndex] &&
+        this.displayEntries[this.currentDisplayIndex].sourceName;
+
+    this.displayEntries = entries;
+
+    let nextIndex = 0;
+    if (previousSource) {
+        for (let i = 0; i < this.displayEntries.length; i++) {
+            if (this.displayEntries[i].sourceName === previousSource) {
+                nextIndex = i;
+                break;
+            }
+        }
+    }
+
+    this.currentDisplayIndex = nextIndex;
+    this.renderCurrentDisplayEntry();
+};
+
+GeneralInfo.prototype.renderCurrentDisplayEntry = function () {
+    if (this.displayEntries.length === 0) {
+        return;
+    }
+
+    const entry = this.displayEntries[this.currentDisplayIndex];
+    this.sensorDisplaySource.innerHTML = "แสดงข้อมูล: " + entry.sourceName;
+    this.setTemperatureReading(entry.reading.temp);
+    this.setHumidityReading(entry.reading.humidity);
+    this.setSoilMoistureReading(entry.reading.soilMoisture);
+};
+
+GeneralInfo.prototype.advanceDisplayEntry = function () {
+    if (this.displayEntries.length <= 1) {
+        return;
+    }
+
+    this.currentDisplayIndex =
+        (this.currentDisplayIndex + 1) % this.displayEntries.length;
+    this.renderCurrentDisplayEntry();
 };
 
 GeneralInfo.prototype.updateStatus = function (data) {
@@ -1153,9 +1254,16 @@ function getESPServerStatus(
             if (sensorDataAvailable) {
                 generalInfo.setDataAvailableState(data["time"]);
                 generalInfo.setCurrentTime(data["time"]);
-                generalInfo.setTemperatureReading(data["temp"]);
-                generalInfo.setHumidityReading(data["humidity"]);
-                generalInfo.setSoilMoistureReading(data["soil-moisture"]);
+
+                const averageReading = {
+                    temp: data["temp"],
+                    humidity: data["humidity"],
+                    "soil-moisture": data["soil-moisture"],
+                };
+                const nodeReadings = Array.isArray(data["node-snapshots"])
+                    ? data["node-snapshots"]
+                    : [];
+                generalInfo.updateDisplayEntries(averageReading, nodeReadings);
             } else {
                 generalInfo.setNoDataState();
             }
