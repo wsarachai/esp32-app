@@ -441,13 +441,15 @@ static void wifi_app_task(void *pvParameters)
       },
   };
 
-  // 10. Set bandwidth, mode (APSTA), apply config, and start
-  ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));
+  // 10. Set mode (APSTA), apply config, and start
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &s_ap_config));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_sta_config));
   ESP_ERROR_CHECK(esp_wifi_start());
   WIFI_APP_LOG_STACK_MARGIN("after esp_wifi_start");
+
+  // 11. Set bandwidth after WiFi is started
+  ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));
 
   ESP_LOGI(TAG, "WiFi AP ready. Connect to SSID \"%s\" with password \"%s\"",
            WIFI_AP_SSID, WIFI_AP_PASSWORD);
